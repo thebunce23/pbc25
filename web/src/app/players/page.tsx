@@ -33,6 +33,17 @@ const membershipStatusColors = {
   suspended: 'bg-red-100 text-red-800'
 }
 
+// Helper function to convert skill level to number for filtering
+const getSkillLevelNumber = (skillLevel: string): number => {
+  switch (skillLevel) {
+    case 'Beginner': return 1
+    case 'Intermediate': return 2
+    case 'Advanced': return 3
+    case 'Professional': return 4
+    default: return 1
+  }
+}
+
 export default function PlayersPage() {
   const [players, setPlayers] = useState<UIPlayer[]>([])
   const [loading, setLoading] = useState(true)
@@ -90,17 +101,6 @@ export default function PlayersPage() {
     
     return matchesSearch && matchesFilter && matchesAdvancedFilters
   })
-
-  // Helper function to convert skill level to number for filtering
-  const getSkillLevelNumber = (skillLevel: string): number => {
-    switch (skillLevel) {
-      case 'Beginner': return 1
-      case 'Intermediate': return 2
-      case 'Advanced': return 3
-      case 'Professional': return 4
-      default: return 1
-    }
-  }
 
   const stats = {
     total: players.length,
