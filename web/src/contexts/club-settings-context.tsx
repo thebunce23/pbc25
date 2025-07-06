@@ -283,8 +283,10 @@ export function ClubSettingsProvider({ children }: { children: ReactNode }) {
     return `${prefix} ${phone}`
   }
 
-  const formatDate = (date: Date | string) => {
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return 'No date provided'
     const dateObj = typeof date === 'string' ? new Date(date) : date
+    if (!dateObj || isNaN(dateObj.getTime())) return 'Invalid date'
     const { dateFormat } = clubSettings
     
     // Simple date formatting based on dateFormat
@@ -315,8 +317,10 @@ export function ClubSettingsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const formatTime = (time: Date | string) => {
+  const formatTime = (time: Date | string | null | undefined) => {
+    if (!time) return 'No time provided'
     const timeObj = typeof time === 'string' ? new Date(time) : time
+    if (!timeObj || isNaN(timeObj.getTime())) return 'Invalid time'
     const { timeFormat } = clubSettings
     
     const options: Intl.DateTimeFormatOptions = {
