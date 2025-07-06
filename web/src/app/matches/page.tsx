@@ -95,6 +95,25 @@ export default function MatchesPage() {
     })
   }
 
+  const formatScore = (score: any) => {
+    if (!score || typeof score !== 'object' || Object.keys(score).length === 0) {
+      return null
+    }
+    
+    // Handle common score formats
+    if (score.teamA !== undefined && score.teamB !== undefined) {
+      return `${score.teamA} - ${score.teamB}`
+    }
+    
+    // Handle sets format
+    if (score.sets && Array.isArray(score.sets)) {
+      return score.sets.map((set: any) => `${set.teamA}-${set.teamB}`).join(', ')
+    }
+    
+    // Fallback to string representation
+    return JSON.stringify(score)
+  }
+
   const handleEditMatch = async (matchData: any) => {
     // Update match in the list
     setMatches(prev => prev.map(match => 
@@ -274,9 +293,9 @@ export default function MatchesPage() {
                             {match.skill_level}
                           </span>
                         </div>
-                        {match.score && (
+                        {formatScore(match.score) && (
                           <div className="flex items-center">
-                            <span className="font-medium">Score: {match.score}</span>
+                            <span className="font-medium">Score: {formatScore(match.score)}</span>
                           </div>
                         )}
                       </div>
