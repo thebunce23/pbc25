@@ -30,16 +30,16 @@ import {
 
 interface Player {
   id: string
-  firstName: string
-  lastName: string
+  first_name: string
+  last_name: string
   email: string
   phone: string
-  skillLevel: number
-  membershipStatus: string
-  waiverSigned: boolean
-  dateJoined: string
-  matchesPlayed: number
-  winRate: number
+  skill_level: string
+  status: string
+  waiverSigned?: boolean
+  join_date: string
+  matchesPlayed?: number
+  winRate?: number
   address?: {
     street?: string
     city?: string
@@ -78,12 +78,9 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
     player.address.zipCode
   ].filter(Boolean).join(', ') : ''
 
-  const getSkillLevelDescription = (level: number) => {
-    if (level >= 4.5) return 'Professional'
-    if (level >= 4.0) return 'Advanced'
-    if (level >= 3.0) return 'Intermediate'
-    if (level >= 2.0) return 'Novice'
-    return 'Beginner'
+  const getSkillLevelDescription = (level: string) => {
+    // The skill level is already a string description
+    return level
   }
 
   const getWinRateColor = (winRate: number) => {
@@ -101,13 +98,13 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
               <DialogTitle className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                   <span className="text-sm font-medium text-blue-600">
-                    {player.firstName.charAt(0)}{player.lastName.charAt(0)}
+                    {player.first_name?.charAt(0) || ''}{player.last_name?.charAt(0) || ''}
                   </span>
                 </div>
-                {player.firstName} {player.lastName}
+                {player.first_name} {player.last_name}
               </DialogTitle>
               <DialogDescription>
-                Member since {formatDate(player.dateJoined)}
+                Member since {formatDate(player.join_date)}
               </DialogDescription>
             </div>
             {onEdit && (
@@ -122,8 +119,8 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
         <div className="space-y-6">
           {/* Status Overview */}
           <div className="flex items-center gap-4">
-            <Badge className={membershipStatusColors[player.membershipStatus as keyof typeof membershipStatusColors]}>
-              {player.membershipStatus}
+            <Badge className={membershipStatusColors[player.status as keyof typeof membershipStatusColors]}>
+              {player.status}
             </Badge>
             {!player.waiverSigned && (
               <Badge variant="destructive" className="flex items-center gap-1">
@@ -180,15 +177,15 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
                     <Target className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Skill Level</span>
                   </div>
-                  <div className="text-2xl font-bold">{player.skillLevel}</div>
-                  <div className="text-xs text-muted-foreground">{getSkillLevelDescription(player.skillLevel)}</div>
+                  <div className="text-2xl font-bold">{player.skill_level}</div>
+                  <div className="text-xs text-muted-foreground">{getSkillLevelDescription(player.skill_level)}</div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Matches</span>
                   </div>
-                  <div className="text-2xl font-bold">{player.matchesPlayed}</div>
+                  <div className="text-2xl font-bold">{player.matchesPlayed || 0}</div>
                   <div className="text-xs text-muted-foreground">Total played</div>
                 </div>
                 <div className="text-center">
@@ -196,8 +193,8 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Win Rate</span>
                   </div>
-                  <div className={`text-2xl font-bold ${getWinRateColor(player.winRate)}`}>
-                    {player.winRate}%
+                  <div className={`text-2xl font-bold ${getWinRateColor(player.winRate || 0)}`}>
+                    {player.winRate || 0}%
                   </div>
                   <div className="text-xs text-muted-foreground">Success rate</div>
                 </div>
@@ -206,7 +203,7 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Member</span>
                   </div>
-                  <div className="text-2xl font-bold">{Math.floor((new Date().getTime() - new Date(player.dateJoined).getTime()) / (1000 * 3600 * 24 * 30))}</div>
+                  <div className="text-2xl font-bold">{Math.floor((new Date().getTime() - new Date(player.join_date).getTime()) / (1000 * 3600 * 24 * 30))}</div>
                   <div className="text-xs text-muted-foreground">Months</div>
                 </div>
               </div>
