@@ -188,7 +188,7 @@ export default function MatchesPage() {
             </div>
             
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger>
                 <Button variant="outline" size="sm">
                   <Filter className="h-4 w-4 mr-2" />
                   {filterStatus === 'all' ? 'All Status' : statusLabels[filterStatus as keyof typeof statusLabels]}
