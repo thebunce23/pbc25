@@ -15,34 +15,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Separator } from '@/components/ui/separator'
 import {
   User,
   Mail,
   Phone,
   MapPin,
-  Calendar,
   Trophy,
   Target,
   Shield,
   AlertCircle,
-  Users,
   Clock,
   TrendingUp,
   Edit,
   Activity,
-  DollarSign,
-  Award,
-  GameController2,
+  Gamepad2,
   CreditCard,
-  Star,
   ChevronRight,
-  PlayCircle,
-  PauseCircle,
   CheckCircle,
   XCircle,
   ArrowUp,
-  ArrowDown,
   Minus
 } from 'lucide-react'
 
@@ -200,16 +191,6 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
     player.address.zipCode
   ].filter(Boolean).join(', ') : ''
 
-  const getSkillLevelDescription = (level: string) => {
-    // The skill level is already a string description
-    return level
-  }
-
-  const getWinRateColor = (winRate: number) => {
-    if (winRate >= 70) return 'text-green-600'
-    if (winRate >= 50) return 'text-blue-600'
-    return 'text-orange-600'
-  }
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`
@@ -316,7 +297,7 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2">
-                    <GameController2 className="h-4 w-4 text-green-600" />
+                    <Gamepad2 className="h-4 w-4 text-green-600" />
                     <div className="text-2xl font-bold">{player.matchesPlayed || 12}</div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Matches Played</p>
@@ -406,7 +387,7 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <GameController2 className="h-5 w-5" />
+                  <Gamepad2 className="h-5 w-5" />
                   Match History
                 </CardTitle>
                 <CardDescription>
