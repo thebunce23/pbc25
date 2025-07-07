@@ -239,11 +239,11 @@ export default function SettingsPage() {
     {
       id: '4',
       name: 'Social',
-      description: 'Event-only membership without court booking',
-      monthlyFee: 20,
+      description: 'Pay-to-play membership (no monthly fees)',
+      monthlyFee: 0,
       initializationFee: 25,
       courtBookingRate: 35,
-      features: ['Club events', 'Social activities'],
+      features: ['Pay per use', 'Club events', 'Social activities'],
       maxAdvanceBookingDays: 3,
       maxActiveBookings: 1,
       isActive: true
@@ -316,8 +316,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'club', label: 'Club Info', icon: Building2 },
-    { id: 'membership', label: 'Membership', icon: Users },
-    { id: 'pricing', label: 'Pricing', icon: CreditCard },
+    { id: 'membership', label: 'Membership & Pricing', icon: CreditCard },
     { id: 'courts', label: 'Courts', icon: MapPin },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'system', label: 'System', icon: Settings },
@@ -834,6 +833,7 @@ export default function SettingsPage() {
 
   const renderMembershipSettings = () => (
     <div className="space-y-6">
+      {/* Membership Types Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -843,16 +843,15 @@ export default function SettingsPage() {
             </div>
             <Button 
               size="sm" 
-              className="flex items-center gap-2"
               onClick={() => {
                 const newMembership = {
                   id: Date.now().toString(),
                   name: 'New Membership',
-                  description: '',
-                  monthlyFee: 0,
-                  initializationFee: 0,
+                  description: 'New membership type',
+                  monthlyFee: 50,
+                  initializationFee: 100,
                   courtBookingRate: 25,
-                  features: [],
+                  features: ['Court booking'],
                   maxAdvanceBookingDays: 14,
                   maxActiveBookings: 3,
                   isActive: true
@@ -860,197 +859,432 @@ export default function SettingsPage() {
                 setMembershipTypes([...membershipTypes, newMembership])
               }}
             >
-              <Plus className="h-4 w-4" />
-              Add Membership Type
+              <Plus className="h-4 w-4 mr-2" />
+              Add Membership
             </Button>
           </CardTitle>
           <CardDescription>
-            Configure membership types and their benefits
+            Configure membership types, fees, and booking privileges. Set Monthly Fee to $0 for pay-to-play memberships.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {membershipTypes.map((membership, index) => (
-              <div key={membership.id} className="border rounded-lg p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Label htmlFor={`name-${membership.id}`}>Membership Name</Label>
-                    <Input 
-                      id={`name-${membership.id}`}
-                      value={membership.name}
-                      onChange={(e) => {
-                        const updated = [...membershipTypes]
-                        updated[index].name = e.target.value
-                        setMembershipTypes(updated)
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
-                      id={`active-${membership.id}`}
-                      checked={membership.isActive}
-                      onChange={(e) => {
-                        const updated = [...membershipTypes]
-                        updated[index].isActive = e.target.checked
-                        setMembershipTypes(updated)
-                      }}
-                      className="rounded"
-                    />
-                    <Label htmlFor={`active-${membership.id}`}>Active</Label>
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <Label htmlFor={`description-${membership.id}`}>Description</Label>
-                  <Textarea 
-                    id={`description-${membership.id}`}
-                    value={membership.description}
-                    onChange={(e) => {
-                      const updated = [...membershipTypes]
-                      updated[index].description = e.target.value
-                      setMembershipTypes(updated)
-                    }}
-                    rows={2}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <Label htmlFor={`monthlyFee-${membership.id}`}>Monthly Fee ($)</Label>
-                    <Input 
-                      id={`monthlyFee-${membership.id}`}
-                      type="number"
-                      value={membership.monthlyFee}
-                      onChange={(e) => {
-                        const updated = [...membershipTypes]
-                        updated[index].monthlyFee = parseFloat(e.target.value) || 0
-                        setMembershipTypes(updated)
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`initFee-${membership.id}`}>Initialization Fee ($)</Label>
-                    <Input 
-                      id={`initFee-${membership.id}`}
-                      type="number"
-                      value={membership.initializationFee}
-                      onChange={(e) => {
-                        const updated = [...membershipTypes]
-                        updated[index].initializationFee = parseFloat(e.target.value) || 0
-                        setMembershipTypes(updated)
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`courtRate-${membership.id}`}>Court Booking Rate ($)</Label>
-                    <Input 
-                      id={`courtRate-${membership.id}`}
-                      type="number"
-                      value={membership.courtBookingRate}
-                      onChange={(e) => {
-                        const updated = [...membershipTypes]
-                        updated[index].courtBookingRate = parseFloat(e.target.value) || 0
-                        setMembershipTypes(updated)
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Label htmlFor={`advanceDays-${membership.id}`}>Max Advance Booking Days</Label>
-                    <Input 
-                      id={`advanceDays-${membership.id}`}
-                      type="number"
-                      value={membership.maxAdvanceBookingDays}
-                      onChange={(e) => {
-                        const updated = [...membershipTypes]
-                        updated[index].maxAdvanceBookingDays = parseInt(e.target.value) || 0
-                        setMembershipTypes(updated)
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`maxBookings-${membership.id}`}>Max Active Bookings</Label>
-                    <Input 
-                      id={`maxBookings-${membership.id}`}
-                      type="number"
-                      value={membership.maxActiveBookings}
-                      onChange={(e) => {
-                        const updated = [...membershipTypes]
-                        updated[index].maxActiveBookings = parseInt(e.target.value) || 0
-                        setMembershipTypes(updated)
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <Label>Features</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {membership.features.map((feature, featureIndex) => (
-                      <Badge key={featureIndex} variant="secondary" className="flex items-center gap-1">
-                        {feature}
-                        <button
-                          onClick={() => {
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Fee</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Init Fee</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Court Rate ($/hr)</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking Days</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Active</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {membershipTypes.map((membership, index) => (
+                  <tr key={membership.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-4">
+                      <div>
+                        <Input 
+                          value={membership.name}
+                          onChange={(e) => {
                             const updated = [...membershipTypes]
-                            updated[index].features.splice(featureIndex, 1)
+                            updated[index].name = e.target.value
                             setMembershipTypes(updated)
                           }}
-                          className="ml-1 hover:text-red-600"
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    ))}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        const feature = prompt("Enter feature name:")
-                        if (feature) {
+                          className="font-medium text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">{membership.description}</p>
+                      </div>
+                    </td>
+                    <td className="px-3 py-4">
+                      <div className="flex flex-col gap-1">
+                        <Input 
+                          type="number"
+                          value={membership.monthlyFee}
+                          onChange={(e) => {
+                            const updated = [...membershipTypes]
+                            updated[index].monthlyFee = parseFloat(e.target.value) || 0
+                            setMembershipTypes(updated)
+                          }}
+                          className="w-20 text-sm"
+                        />
+                        {membership.monthlyFee === 0 && (
+                          <span className="text-xs text-blue-600 font-medium">Pay-to-play</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4">
+                      <Input 
+                        type="number"
+                        value={membership.initializationFee}
+                        onChange={(e) => {
                           const updated = [...membershipTypes]
-                          updated[index].features.push(feature)
+                          updated[index].initializationFee = parseFloat(e.target.value) || 0
                           setMembershipTypes(updated)
-                        }
-                      }}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => {
-                      if (confirm("Delete this membership type?")) {
-                        setMembershipTypes(membershipTypes.filter(m => m.id !== membership.id))
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="flex justify-end mt-6">
-            <Button 
-              onClick={() => handleSave('membership')}
-              disabled={saveStatus === 'saving'}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saveStatus === 'saving' ? 'Saving...' : 'Save Membership Types'}
-            </Button>
+                        }}
+                        className="w-20 text-sm"
+                      />
+                    </td>
+                    <td className="px-3 py-4">
+                      <Input 
+                        type="number"
+                        value={membership.courtBookingRate}
+                        onChange={(e) => {
+                          const updated = [...membershipTypes]
+                          updated[index].courtBookingRate = parseFloat(e.target.value) || 0
+                          setMembershipTypes(updated)
+                        }}
+                        className="w-20 text-sm"
+                      />
+                    </td>
+                    <td className="px-3 py-4">
+                      <Input 
+                        type="number"
+                        value={membership.maxAdvanceBookingDays}
+                        onChange={(e) => {
+                          const updated = [...membershipTypes]
+                          updated[index].maxAdvanceBookingDays = parseInt(e.target.value) || 0
+                          setMembershipTypes(updated)
+                        }}
+                        className="w-16 text-sm"
+                      />
+                    </td>
+                    <td className="px-3 py-4">
+                      <Input 
+                        type="number"
+                        value={membership.maxActiveBookings}
+                        onChange={(e) => {
+                          const updated = [...membershipTypes]
+                          updated[index].maxActiveBookings = parseInt(e.target.value) || 0
+                          setMembershipTypes(updated)
+                        }}
+                        className="w-16 text-sm"
+                      />
+                    </td>
+                    <td className="px-3 py-4">
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox" 
+                          checked={membership.isActive}
+                          onChange={(e) => {
+                            const updated = [...membershipTypes]
+                            updated[index].isActive = e.target.checked
+                            setMembershipTypes(updated)
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm">{membership.isActive ? 'Active' : 'Inactive'}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-4">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          if (confirm("Delete this membership type?")) {
+                            setMembershipTypes(membershipTypes.filter(m => m.id !== membership.id))
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
+
+      {/* Pricing Settings in Compact Grid */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Pricing Settings
+          </CardTitle>
+          <CardDescription>
+            Set rates for courts, tournaments, lessons and fees
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Court Rates */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Court Booking Rates</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Peak Hours:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.courtBookingRates.peak}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        courtBookingRates: { ...pricingSettings.courtBookingRates, peak: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Off-Peak:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.courtBookingRates.offPeak}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        courtBookingRates: { ...pricingSettings.courtBookingRates, offPeak: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Weekend:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.courtBookingRates.weekend}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        courtBookingRates: { ...pricingSettings.courtBookingRates, weekend: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tournament Fees */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Tournament Fees</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Individual:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.tournamentFees.individual}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        tournamentFees: { ...pricingSettings.tournamentFees, individual: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Doubles:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.tournamentFees.doubles}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        tournamentFees: { ...pricingSettings.tournamentFees, doubles: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Mixed:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.tournamentFees.mixed}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        tournamentFees: { ...pricingSettings.tournamentFees, mixed: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Lesson Rates */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Lesson Rates</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Individual:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.lessonRates.individual}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        lessonRates: { ...pricingSettings.lessonRates, individual: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Group:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.lessonRates.group}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        lessonRates: { ...pricingSettings.lessonRates, group: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Clinic:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.lessonRates.clinic}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        lessonRates: { ...pricingSettings.lessonRates, clinic: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Guest & Late Fees */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Guest & Late Fees</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Day Pass:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.guestFees.dayPass}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        guestFees: { ...pricingSettings.guestFees, dayPass: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Guest Hour:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.guestFees.courtHour}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        guestFees: { ...pricingSettings.guestFees, courtHour: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">No-Show:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.lateFees.noShow}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        lateFees: { ...pricingSettings.lateFees, noShow: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Late Cancel:</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">$</span>
+                    <Input 
+                      type="number"
+                      value={pricingSettings.lateFees.lateCancellation}
+                      onChange={(e) => setPricingSettings({
+                        ...pricingSettings,
+                        lateFees: { ...pricingSettings.lateFees, lateCancellation: parseFloat(e.target.value) || 0 }
+                      })}
+                      className="w-16 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* General Settings */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">General</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Currency:</Label>
+                  <select 
+                    value={pricingSettings.currency}
+                    onChange={(e) => setPricingSettings({ ...pricingSettings, currency: e.target.value })}
+                    className="w-20 h-8 text-sm border rounded px-2"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="CAD">CAD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="AUD">AUD</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Tax Rate:</Label>
+                  <div className="flex items-center gap-1">
+                    <Input 
+                      type="number"
+                      step="0.1"
+                      value={pricingSettings.taxRate}
+                      onChange={(e) => setPricingSettings({ ...pricingSettings, taxRate: parseFloat(e.target.value) || 0 })}
+                      className="w-16 h-8 text-sm"
+                    />
+                    <span className="text-sm">%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end gap-3">
+        <Button 
+          onClick={() => handleSave('membership')}
+          disabled={saveStatus === 'saving'}
+          className="flex items-center gap-2"
+        >
+          <Save className="h-4 w-4" />
+          {saveStatus === 'saving' ? 'Saving...' : 'Save Membership & Pricing'}
+        </Button>
+      </div>
     </div>
   )
 
@@ -1478,7 +1712,6 @@ export default function SettingsPage() {
         {/* Settings Content */}
         {activeTab === 'club' && renderClubSettings()}
         {activeTab === 'membership' && renderMembershipSettings()}
-        {activeTab === 'pricing' && renderPricingSettings()}
         {activeTab === 'courts' && renderCourtSettings()}
         {activeTab === 'notifications' && renderNotificationSettings()}
         {activeTab === 'system' && renderSystemSettings()}
