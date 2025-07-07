@@ -1006,7 +1006,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Pricing Settings in Compact Grid */}
+      {/* Pricing Settings Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -1018,15 +1018,22 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Court Rates */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Court Booking Rates</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Peak Hours:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {/* Court Rates */}
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-sm text-gray-900">Court Booking</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Peak Hours</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.courtBookingRates.peak}
@@ -1034,14 +1041,15 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         courtBookingRates: { ...pricingSettings.courtBookingRates, peak: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Off-Peak:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Off-Peak</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.courtBookingRates.offPeak}
@@ -1049,14 +1057,15 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         courtBookingRates: { ...pricingSettings.courtBookingRates, offPeak: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Weekend:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Weekend</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.courtBookingRates.weekend}
@@ -1064,21 +1073,17 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         courtBookingRates: { ...pricingSettings.courtBookingRates, weekend: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tournament Fees */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Tournament Fees</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Individual:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                </tr>
+                
+                {/* Tournament Fees */}
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-sm text-gray-900">Tournament</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Individual</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.tournamentFees.individual}
@@ -1086,14 +1091,15 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         tournamentFees: { ...pricingSettings.tournamentFees, individual: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Doubles:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$ entry</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Doubles</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.tournamentFees.doubles}
@@ -1101,14 +1107,15 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         tournamentFees: { ...pricingSettings.tournamentFees, doubles: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Mixed:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$ entry</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Mixed Doubles</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.tournamentFees.mixed}
@@ -1116,21 +1123,17 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         tournamentFees: { ...pricingSettings.tournamentFees, mixed: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Lesson Rates */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Lesson Rates</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Individual:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$ entry</td>
+                </tr>
+                
+                {/* Lesson Rates */}
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-sm text-gray-900">Lessons</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Individual</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.lessonRates.individual}
@@ -1138,14 +1141,15 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         lessonRates: { ...pricingSettings.lessonRates, individual: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Group:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Group</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.lessonRates.group}
@@ -1153,14 +1157,15 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         lessonRates: { ...pricingSettings.lessonRates, group: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Clinic:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$/person/hour</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Clinic</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.lessonRates.clinic}
@@ -1168,21 +1173,17 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         lessonRates: { ...pricingSettings.lessonRates, clinic: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Guest & Late Fees */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Guest & Late Fees</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Day Pass:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$/person/session</td>
+                </tr>
+                
+                {/* Guest & Late Fees */}
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-sm text-gray-900">Guest Fees</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Day Pass</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.guestFees.dayPass}
@@ -1190,14 +1191,15 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         guestFees: { ...pricingSettings.guestFees, dayPass: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Guest Hour:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$ per day</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Court Hour</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.guestFees.courtHour}
@@ -1205,14 +1207,16 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         guestFees: { ...pricingSettings.guestFees, courtHour: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">No-Show:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                </tr>
+                
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-sm text-gray-900">Penalties</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">No-Show</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.lateFees.noShow}
@@ -1220,14 +1224,15 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         lateFees: { ...pricingSettings.lateFees, noShow: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Late Cancel:</Label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$ fee</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Late Cancellation</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       value={pricingSettings.lateFees.lateCancellation}
@@ -1235,46 +1240,47 @@ export default function SettingsPage() {
                         ...pricingSettings,
                         lateFees: { ...pricingSettings.lateFees, lateCancellation: parseFloat(e.target.value) || 0 }
                       })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* General Settings */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">General</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Currency:</Label>
-                  <select 
-                    value={pricingSettings.currency}
-                    onChange={(e) => setPricingSettings({ ...pricingSettings, currency: e.target.value })}
-                    className="w-20 h-8 text-sm border rounded px-2"
-                  >
-                    <option value="USD">USD</option>
-                    <option value="CAD">CAD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="AUD">AUD</option>
-                  </select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Tax Rate:</Label>
-                  <div className="flex items-center gap-1">
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">$ fee</td>
+                </tr>
+                
+                {/* General Settings */}
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-sm text-gray-900">General</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Currency</td>
+                  <td className="px-4 py-3">
+                    <select 
+                      value={pricingSettings.currency}
+                      onChange={(e) => setPricingSettings({ ...pricingSettings, currency: e.target.value })}
+                      className="w-20 h-8 text-sm border rounded px-2"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="CAD">CAD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="AUD">AUD</option>
+                    </select>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Code</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-sm text-gray-600">Tax Rate</td>
+                  <td className="px-4 py-3">
                     <Input 
                       type="number"
                       step="0.1"
                       value={pricingSettings.taxRate}
                       onChange={(e) => setPricingSettings({ ...pricingSettings, taxRate: parseFloat(e.target.value) || 0 })}
-                      className="w-16 h-8 text-sm"
+                      className="w-20 text-sm"
                     />
-                    <span className="text-sm">%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">%</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
