@@ -184,6 +184,9 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
 
   if (!player) return null
 
+  // Debug logging
+  console.log('Player data in modal:', player)
+
   const fullAddress = player.address ? [
     player.address.street,
     player.address.city,
@@ -236,14 +239,14 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={player.avatar} alt={`${player.first_name} ${player.last_name}`} />
+                <AvatarImage src={player.avatar} alt={`${player.first_name || 'Unknown'} ${player.last_name || 'Player'}`} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-lg font-semibold">
-                  {getInitials(player.first_name, player.last_name)}
+                  {getInitials(player.first_name || 'U', player.last_name || 'P')}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <DialogTitle className="text-2xl font-bold">
-                  {player.first_name} {player.last_name}
+                  {player.first_name || 'Unknown'} {player.last_name || 'Player'}
                 </DialogTitle>
                 <DialogDescription className="text-base">
                   {player.skill_level} • Member since {formatDate(player.join_date)}
