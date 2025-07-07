@@ -231,7 +231,7 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[1000px] max-w-[95vw] h-auto max-h-[90vh] overflow-hidden flex flex-col fixed top-[5vh] left-1/2 transform -translate-x-1/2">
+      <DialogContent className="w-[1000px] max-w-[95vw] max-h-[85vh] top-[7.5vh] translate-y-0 overflow-hidden flex flex-col">
         <DialogHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
