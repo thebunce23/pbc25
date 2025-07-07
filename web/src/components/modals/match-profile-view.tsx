@@ -27,18 +27,29 @@ import {
   Timer
 } from 'lucide-react'
 
+interface Player {
+  id: string
+  firstName: string
+  lastName: string
+  skillLevel: number
+}
+
+interface Participant {
+  player: Player
+  team: 'A' | 'B'
+}
+
 interface Match {
   id: string
-  matchDate: string
-  matchTime: string
-  court: { id: string; name: string }
-  player1: { id: string; firstName: string; lastName: string; skillLevel: number }
-  player2: { id: string; firstName: string; lastName: string; skillLevel: number }
+  date: string
+  time: string
+  court?: { id: string; name: string }
+  participants?: Participant[]
   status: string
   tournament?: { id: string; name: string } | null
-  score?: string | null
+  score?: string | object | null
   winner?: string | null
-  duration?: number | null
+  duration_minutes?: number | null
   notes?: string | null
 }
 
@@ -68,6 +79,14 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
 
   if (!match) return null
 
+  // Extract players from participants
+  const teamAPlayer = match.participants?.find(p => p.team === 'A')?.player
+  const teamBPlayer = match.participants?.find(p => p.team === 'B')?.player
+
+  if (!teamAPlayer || !teamBPlayer) {
+    return null // Can't display match without both players
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'scheduled': return <Calendar className="h-4 w-4" />
@@ -81,8 +100,11 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
   const getWinner = () => {
     if (match.status !== 'completed' || !match.score) return null
     
+    const scoreStr = typeof match.score === 'object' ? JSON.stringify(match.score) : match.score
+    if (!scoreStr) return null
+    
     // Simple logic to determine winner from score
-    const games = match.score.split(', ')
+    const games = scoreStr.split(', ')
     let player1Wins = 0
     let player2Wins = 0
     
@@ -94,13 +116,13 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
     
     if (player1Wins > player2Wins) {
       return {
-        winner: `${match.player1.firstName} ${match.player1.lastName}`,
-        loser: `${match.player2.firstName} ${match.player2.lastName}`
+        winner: `${teamAPlayer.firstName} ${teamAPlayer.lastName}`,
+        loser: `${teamBPlayer.firstName} ${teamBPlayer.lastName}`
       }
     } else if (player2Wins > player1Wins) {
       return {
-        winner: `${match.player2.firstName} ${match.player2.lastName}`,
-        loser: `${match.player1.firstName} ${match.player1.lastName}`
+        winner: `${teamBPlayer.firstName} ${teamBPlayer.lastName}`,
+        loser: `${teamAPlayer.firstName} ${teamAPlayer.lastName}`
       }
     }
     return null
@@ -113,7 +135,7 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
   }
 
   const getSkillDifference = () => {
-    return Math.abs(match.player1.skillLevel - match.player2.skillLevel)
+    return Math.abs(teamAPlayer.skillLevel - teamBPlayer.skillLevel)
   }
 
   return (
@@ -126,10 +148,10 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                   {getStatusIcon(match.status)}
                 </div>
-                {match.player1.firstName} {match.player1.lastName} vs {match.player2.firstName} {match.player2.lastName}
+                {teamAPlayer.firstName} {teamAPlayer.lastName} vs {teamBPlayer.firstName} {teamBPlayer.lastName}
               </DialogTitle>
               <DialogDescription>
-                {formatDateTime(match.matchDate, match.matchTime)}
+                {formatDateTime(match.date, match.time)}
               </DialogDescription>
             </div>
             {onEdit && (
@@ -175,14 +197,14 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <div className="text-sm text-muted-foreground">Date</div>
-                    <div className="font-medium">{formatDate(match.matchDate)}</div>
+                    <div className="font-medium">{formatDate(match.date)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <div className="text-sm text-muted-foreground">Time</div>
-                    <div className="font-medium">{formatTime(new Date(`${match.matchDate}T${match.matchTime}`))}</div>
+                    <div className="font-medium">{formatTime(new Date(`${match.date}T${match.time}`))}</div>
                   </div>
                 </div>
               </div>
@@ -191,16 +213,16 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
                 <MapPin className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <div className="text-sm text-muted-foreground">Court</div>
-                  <div className="font-medium">{match.court.name}</div>
+                  <div className="font-medium">{match.court?.name || 'TBD'}</div>
                 </div>
               </div>
 
-              {match.duration && (
+              {match.duration_minutes && (
                 <div className="flex items-center gap-3">
                   <Timer className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <div className="text-sm text-muted-foreground">Duration</div>
-                    <div className="font-medium">{match.duration} minutes</div>
+                    <div className="font-medium">{match.duration_minutes} minutes</div>
                   </div>
                 </div>
               )}
@@ -220,15 +242,15 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
                 <div className="text-center p-4 border rounded-lg">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                     <span className="text-lg font-medium text-blue-600">
-                      {match.player1.firstName.charAt(0)}{match.player1.lastName.charAt(0)}
+                      {teamAPlayer.firstName.charAt(0)}{teamAPlayer.lastName.charAt(0)}
                     </span>
                   </div>
-                  <div className="font-medium">{match.player1.firstName} {match.player1.lastName}</div>
+                  <div className="font-medium">{teamAPlayer.firstName} {teamAPlayer.lastName}</div>
                   <div className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
                     <Target className="h-3 w-3" />
-                    Skill: {match.player1.skillLevel}
+                    Skill: {teamAPlayer.skillLevel}
                   </div>
-                  {winner && winner.winner === `${match.player1.firstName} ${match.player1.lastName}` && (
+                  {winner && winner.winner === `${teamAPlayer.firstName} ${teamAPlayer.lastName}` && (
                     <Badge className="mt-2 bg-yellow-100 text-yellow-800">Winner</Badge>
                   )}
                 </div>
@@ -236,15 +258,15 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
                 <div className="text-center p-4 border rounded-lg">
                   <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
                     <span className="text-lg font-medium text-purple-600">
-                      {match.player2.firstName.charAt(0)}{match.player2.lastName.charAt(0)}
+                      {teamBPlayer.firstName.charAt(0)}{teamBPlayer.lastName.charAt(0)}
                     </span>
                   </div>
-                  <div className="font-medium">{match.player2.firstName} {match.player2.lastName}</div>
+                  <div className="font-medium">{teamBPlayer.firstName} {teamBPlayer.lastName}</div>
                   <div className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
                     <Target className="h-3 w-3" />
-                    Skill: {match.player2.skillLevel}
+                    Skill: {teamBPlayer.skillLevel}
                   </div>
-                  {winner && winner.winner === `${match.player2.firstName} ${match.player2.lastName}` && (
+                  {winner && winner.winner === `${teamBPlayer.firstName} ${teamBPlayer.lastName}` && (
                     <Badge className="mt-2 bg-yellow-100 text-yellow-800">Winner</Badge>
                   )}
                 </div>
@@ -268,7 +290,9 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className="text-3xl font-bold mb-2">{match.score}</div>
+                  <div className="text-3xl font-bold mb-2">
+                    {typeof match.score === 'object' ? JSON.stringify(match.score) : match.score}
+                  </div>
                   {winner && (
                     <div className="text-lg text-green-600 font-medium">
                       🏆 {winner.winner} wins!
@@ -276,19 +300,22 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
                   )}
                 </div>
                 
-                {match.score.includes(',') && (
-                  <div className="mt-4">
-                    <div className="text-sm text-muted-foreground mb-2">Game Breakdown:</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {match.score.split(', ').map((game, index) => (
-                        <div key={index} className="text-center p-2 bg-gray-50 rounded">
-                          <div className="text-xs text-muted-foreground">Game {index + 1}</div>
-                          <div className="font-medium">{game}</div>
-                        </div>
-                      ))}
+                {(() => {
+                  const scoreStr = typeof match.score === 'object' ? JSON.stringify(match.score) : match.score;
+                  return scoreStr && scoreStr.includes(',') && (
+                    <div className="mt-4">
+                      <div className="text-sm text-muted-foreground mb-2">Game Breakdown:</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {scoreStr.split(', ').map((game, index) => (
+                          <div key={index} className="text-center p-2 bg-gray-50 rounded">
+                            <div className="text-xs text-muted-foreground">Game {index + 1}</div>
+                            <div className="font-medium">{game}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </CardContent>
             </Card>
           )}

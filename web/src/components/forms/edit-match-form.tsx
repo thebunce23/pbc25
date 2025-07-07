@@ -25,34 +25,53 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import courtService, { type Court } from '@/lib/services/court-service'
 
 const matchSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  matchType: z.enum(['Singles', 'Doubles', 'Mixed Doubles', 'Tournament']),
+  skillLevel: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Mixed']),
   matchDate: z.string().min(1, 'Date is required'),
   matchTime: z.string().min(1, 'Time is required'),
-  courtId: z.string().min(1, 'Court is required'),
-  player1Id: z.string().min(1, 'Player 1 is required'),
-  player2Id: z.string().min(1, 'Player 2 is required'),
+  courtId: z.string().optional(),
+  maxPlayers: z.number().min(2, 'At least 2 players required').max(8, 'Maximum 8 players allowed'),
   status: z.enum(['scheduled', 'in_progress', 'completed', 'cancelled']),
   tournamentId: z.string().optional(),
   score: z.string().optional(),
   duration: z.number().optional(),
   notes: z.string().optional(),
+  description: z.string().optional(),
 })
 
 type MatchFormData = z.infer<typeof matchSchema>
 
+interface Player {
+  id: string
+  first_name: string
+  last_name: string
+  skill_level: string
+}
+
+interface Participant {
+  player: Player
+  team: 'A' | 'B'
+}
+
 interface Match {
   id: string
-  matchDate: string
-  matchTime: string
-  court: { id: string; name: string }
-  player1: { id: string; firstName: string; lastName: string; skillLevel: number }
-  player2: { id: string; firstName: string; lastName: string; skillLevel: number }
+  title: string
+  match_type: string
+  skill_level: string
+  date: string
+  time: string
+  court?: { id: string; name: string }
+  participants?: Participant[]
   status: string
-  tournament?: { id: string; name: string } | null
-  score?: string | null
-  duration?: number | null
-  notes?: string | null
+  score?: string | object | null
+  duration_minutes?: number
+  max_players: number
+  notes?: string
+  description?: string
 }
 
 interface EditMatchFormProps {
@@ -62,19 +81,13 @@ interface EditMatchFormProps {
   match: Match | null
 }
 
-// Mock data - in a real app, this would come from your API
-const mockCourts = [
-  { id: '1', name: 'Court A' },
-  { id: '2', name: 'Court B' },
-  { id: '3', name: 'Court C' },
-  { id: '4', name: 'Court D' },
-]
+// Court data will be loaded from the service
 
 const mockPlayers = [
-  { id: '1', firstName: 'John', lastName: 'Smith', skillLevel: 3.5 },
-  { id: '2', firstName: 'Sarah', lastName: 'Johnson', skillLevel: 4.0 },
-  { id: '3', firstName: 'Mike', lastName: 'Chen', skillLevel: 2.5 },
-  { id: '4', firstName: 'Lisa', lastName: 'Wong', skillLevel: 3.0 },
+  { id: '1', first_name: 'John', last_name: 'Smith', skill_level: '3.5' },
+  { id: '2', first_name: 'Sarah', last_name: 'Johnson', skill_level: '4.0' },
+  { id: '3', first_name: 'Mike', last_name: 'Chen', skill_level: '2.5' },
+  { id: '4', first_name: 'Lisa', last_name: 'Wong', skill_level: '3.0' },
 ]
 
 const mockTournaments = [
@@ -86,6 +99,7 @@ const mockTournaments = [
 export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: EditMatchFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [courts, setCourts] = useState<Court[]>([])
   const { formatDate, formatTime } = useClubSettings()
 
   const {
@@ -98,29 +112,81 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
   } = useForm<MatchFormData>({
     resolver: zodResolver(matchSchema),
     defaultValues: {
-      status: 'scheduled',
+      title: '',
+      matchType: 'Doubles' as const,
+      skillLevel: 'Mixed' as const,
+      matchDate: '',
+      matchTime: '',
+      courtId: '',
+      maxPlayers: 4,
+      status: 'scheduled' as const,
+      tournamentId: 'none',
+      score: '',
+      notes: '',
+      description: ''
     },
   })
 
   const selectedStatus = watch('status')
-  const selectedPlayer1 = watch('player1Id')
-  const selectedPlayer2 = watch('player2Id')
+  const selectedMatchType = watch('matchType')
+  const selectedMaxPlayers = watch('maxPlayers')
 
   // Reset form when match changes
   useEffect(() => {
     if (match) {
-      setValue('matchDate', match.matchDate)
-      setValue('matchTime', match.matchTime)
-      setValue('courtId', match.court.id)
-      setValue('player1Id', match.player1.id)
-      setValue('player2Id', match.player2.id)
-      setValue('status', match.status as any)
-      setValue('tournamentId', match.tournament?.id || '')
-      setValue('score', match.score || '')
-      setValue('duration', match.duration || undefined)
+      setValue('title', match.title || '')
+      setValue('matchType', (match.match_type as any) || 'Doubles')
+      setValue('skillLevel', (match.skill_level as any) || 'Mixed')
+      setValue('matchDate', match.date || '')
+      setValue('matchTime', match.time || '')
+      setValue('courtId', match.court?.id || '')
+      setValue('maxPlayers', match.max_players || 4)
+      setValue('status', (match.status as any) || 'scheduled')
+      setValue('tournamentId', 'none') // No tournament field in current data
+      
+      // Handle score properly
+      const scoreValue = match.score 
+        ? (typeof match.score === 'object' ? JSON.stringify(match.score) : String(match.score))
+        : ''
+      setValue('score', scoreValue)
+      
+      setValue('duration', match.duration_minutes || undefined)
       setValue('notes', match.notes || '')
+      setValue('description', match.description || '')
+    } else {
+      // Reset form when no match
+      reset({
+        title: '',
+        matchType: 'Doubles' as const,
+        skillLevel: 'Mixed' as const,
+        matchDate: '',
+        matchTime: '',
+        courtId: '',
+        maxPlayers: 4,
+        status: 'scheduled' as const,
+        tournamentId: 'none',
+        score: '',
+        notes: '',
+        description: ''
+      })
     }
-  }, [match, setValue])
+  }, [match, setValue, reset])
+
+  // Load courts when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadCourts()
+    }
+  }, [open])
+
+  const loadCourts = async () => {
+    try {
+      const courtsData = await courtService.getAllCourts()
+      setCourts(courtsData)
+    } catch (error) {
+      console.error('Failed to load courts:', error)
+    }
+  }
 
   const handleFormSubmit = async (data: MatchFormData) => {
     setIsLoading(true)
@@ -142,11 +208,17 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
     onOpenChange(false)
   }
 
-  if (!match) return null
+  // Remove the early return - dialog should render even without a match
+  // if (!match) return null
+
+  // Helper function to safely get player names from participants
+  const getPlayerFromParticipants = (team: 'A' | 'B') => {
+    return match.participants?.find(p => p.team === team)?.player
+  }
 
   const getPlayerName = (playerId: string) => {
     const player = mockPlayers.find(p => p.id === playerId)
-    return player ? `${player.firstName} ${player.lastName}` : 'Unknown Player'
+    return player ? `${player.first_name} ${player.last_name}` : 'Unknown Player'
   }
 
   return (
@@ -155,7 +227,17 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
         <DialogHeader>
           <DialogTitle>Edit Match</DialogTitle>
           <DialogDescription>
-            Update match details for {match.player1.firstName} {match.player1.lastName} vs {match.player2.firstName} {match.player2.lastName}
+            {(() => {
+              if (match) {
+                const teamAPlayer = getPlayerFromParticipants('A')
+                const teamBPlayer = getPlayerFromParticipants('B')
+                if (teamAPlayer && teamBPlayer) {
+                  return `Update match details for ${teamAPlayer.first_name} ${teamAPlayer.last_name} vs ${teamBPlayer.first_name} ${teamBPlayer.last_name}`
+                }
+                return `Update match details for ${match.title || 'this match'}`
+              }
+              return 'Update match details'
+            })()} 
           </DialogDescription>
         </DialogHeader>
 
@@ -165,6 +247,72 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="title">Match Title *</Label>
+            <Input
+              id="title"
+              {...register('title')}
+              placeholder="e.g., Morning Doubles Match"
+            />
+            {errors.title && (
+              <p className="text-sm text-red-600">{errors.title.message}</p>
+            )}
+          </div>
+
+          {/* Match Type and Skill Level */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="matchType">Match Type *</Label>
+              <Select
+                value={selectedMatchType}
+                onValueChange={(value) => {
+                  setValue('matchType', value as any)
+                  // Auto-adjust max players based on match type
+                  if (value === 'Singles') {
+                    setValue('maxPlayers', 2)
+                  } else if (value === 'Doubles' || value === 'Mixed Doubles') {
+                    setValue('maxPlayers', 4)
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select match type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Singles">Singles</SelectItem>
+                  <SelectItem value="Doubles">Doubles</SelectItem>
+                  <SelectItem value="Mixed Doubles">Mixed Doubles</SelectItem>
+                  <SelectItem value="Tournament">Tournament</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.matchType && (
+                <p className="text-sm text-red-600">{errors.matchType.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="skillLevel">Skill Level *</Label>
+              <Select
+                value={watch('skillLevel')}
+                onValueChange={(value) => setValue('skillLevel', value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select skill level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Beginner">Beginner</SelectItem>
+                  <SelectItem value="Intermediate">Intermediate</SelectItem>
+                  <SelectItem value="Advanced">Advanced</SelectItem>
+                  <SelectItem value="Mixed">Mixed</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.skillLevel && (
+                <p className="text-sm text-red-600">{errors.skillLevel.message}</p>
+              )}
+            </div>
+          </div>
 
           {/* Date and Time */}
           <div className="grid grid-cols-2 gap-4">
@@ -204,7 +352,7 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
                 <SelectValue placeholder="Select a court" />
               </SelectTrigger>
               <SelectContent>
-                {mockCourts.map((court) => (
+                {courts.map((court) => (
                   <SelectItem key={court.id} value={court.id}>
                     {court.name}
                   </SelectItem>
@@ -216,56 +364,58 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
             )}
           </div>
 
-          {/* Players */}
+          {/* Max Players and Description */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="player1Id">Player 1 *</Label>
-              <Select
-                value={selectedPlayer1}
-                onValueChange={(value) => setValue('player1Id', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select player 1" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockPlayers
-                    .filter(player => player.id !== selectedPlayer2)
-                    .map((player) => (
-                    <SelectItem key={player.id} value={player.id}>
-                      {player.firstName} {player.lastName} (Skill: {player.skillLevel})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.player1Id && (
-                <p className="text-sm text-red-600">{errors.player1Id.message}</p>
+              <Label htmlFor="maxPlayers">Maximum Players *</Label>
+              <Input
+                id="maxPlayers"
+                type="number"
+                min="2"
+                max="8"
+                {...register('maxPlayers', { valueAsNumber: true })}
+              />
+              {errors.maxPlayers && (
+                <p className="text-sm text-red-600">{errors.maxPlayers.message}</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                {selectedMatchType === 'Singles' ? 'Singles matches typically have 2 players' :
+                 selectedMatchType === 'Doubles' || selectedMatchType === 'Mixed Doubles' ? 'Doubles matches typically have 4 players' :
+                 'Tournament matches can have various player counts'}
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="player2Id">Player 2 *</Label>
-              <Select
-                value={selectedPlayer2}
-                onValueChange={(value) => setValue('player2Id', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select player 2" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockPlayers
-                    .filter(player => player.id !== selectedPlayer1)
-                    .map((player) => (
-                    <SelectItem key={player.id} value={player.id}>
-                      {player.firstName} {player.lastName} (Skill: {player.skillLevel})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.player2Id && (
-                <p className="text-sm text-red-600">{errors.player2Id.message}</p>
-              )}
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Input
+                id="description"
+                {...register('description')}
+                placeholder="Brief description of the match"
+              />
             </div>
           </div>
+
+          {/* Current Participants */}
+          {match && match.participants && match.participants.length > 0 && (
+            <div className="space-y-2">
+              <Label>Current Participants ({match.participants.length}/{selectedMaxPlayers})</Label>
+              <div className="p-3 bg-gray-50 rounded-md">
+                <div className="grid grid-cols-1 gap-2">
+                  {match.participants.map((participant, index) => (
+                    <div key={participant.player.id} className="flex items-center justify-between">
+                      <span className="text-sm">
+                        <span className="font-medium">{participant.player.first_name} {participant.player.last_name}</span>
+                        <span className="text-gray-500 ml-2">(Team {participant.team})</span>
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                        {participant.player.skill_level || 'N/A'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Status and Tournament */}
           <div className="grid grid-cols-2 gap-4">
@@ -290,14 +440,14 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
             <div className="space-y-2">
               <Label htmlFor="tournamentId">Tournament (Optional)</Label>
               <Select
-                value={watch('tournamentId') || ''}
-                onValueChange={(value) => setValue('tournamentId', value || undefined)}
+                value={watch('tournamentId') || 'none'}
+                onValueChange={(value) => setValue('tournamentId', value === 'none' ? undefined : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select tournament (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Tournament</SelectItem>
+                  <SelectItem value="none">No Tournament</SelectItem>
                   {mockTournaments.map((tournament) => (
                     <SelectItem key={tournament.id} value={tournament.id}>
                       {tournament.name}

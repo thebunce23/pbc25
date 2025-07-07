@@ -115,13 +115,40 @@ export default function MatchesPage() {
   }
 
   const handleEditMatch = async (matchData: any) => {
-    // Update match in the list
-    setMatches(prev => prev.map(match => 
-      match.id === selectedMatch?.id 
-        ? { ...match, ...matchData }
-        : match
-    ))
-    console.log('Match updated:', matchData)
+    try {
+      if (!selectedMatch) return
+      
+      // Convert form data to match the database schema
+      const updateData = {
+        title: matchData.title,
+        match_type: matchData.matchType,
+        skill_level: matchData.skillLevel,
+        court_id: matchData.courtId === '' ? null : matchData.courtId,
+        date: matchData.matchDate,
+        time: matchData.matchTime,
+        duration_minutes: matchData.duration,
+        max_players: matchData.maxPlayers,
+        status: matchData.status,
+        score: matchData.score ? JSON.parse(matchData.score || '{}') : null,
+        notes: matchData.notes,
+        description: matchData.description
+      }
+      
+      // Update match via API
+      const updatedMatch = await matchService.updateMatch(selectedMatch.id, updateData)
+      
+      // Update match in the local state
+      setMatches(prev => prev.map(match => 
+        match.id === selectedMatch.id 
+          ? { ...updatedMatch, participants: match.participants }
+          : match
+      ))
+      
+      console.log('Match updated successfully:', updatedMatch)
+    } catch (error) {
+      console.error('Failed to update match:', error)
+      // You might want to show an error toast here
+    }
   }
 
   const handleViewProfile = (match: any) => {
