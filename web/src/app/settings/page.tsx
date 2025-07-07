@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
@@ -22,16 +21,14 @@ import {
   Shield,
   Clock,
   MapPin,
-  Phone,
-  Mail,
-  Globe,
   Save,
   Plus,
   Trash2,
   Edit,
   AlertCircle,
   CheckCircle,
-  Flag
+  CreditCard,
+  DollarSign
 } from 'lucide-react'
 
 
@@ -41,7 +38,6 @@ export default function SettingsPage() {
   const { 
     clubSettings, 
     updateClubSettings, 
-    getSelectedCountry, 
     getCountryTimezones, 
     getCountryPhonePrefix, 
     getAddressLabels, 
@@ -122,10 +118,10 @@ export default function SettingsPage() {
   // Court management state
   const [showAddCourt, setShowAddCourt] = useState(false)
   const [showEditCourt, setShowEditCourt] = useState(false)
-  const [selectedCourt, setSelectedCourt] = useState(null)
+  const [selectedCourt, setSelectedCourt] = useState<Record<string, unknown> | null>(null)
 
   // Court management handlers
-  const handleAddCourt = async (courtData: any) => {
+  const handleAddCourt = async (courtData: Record<string, unknown>) => {
     // Import court service dynamically to avoid SSR issues
     const { default: courtService } = await import('@/lib/services/court-service')
     
@@ -137,7 +133,7 @@ export default function SettingsPage() {
     }
   }
 
-  const handleEditCourt = async (courtData: any) => {
+  const handleEditCourt = async (courtData: Record<string, unknown>) => {
     if (!selectedCourt) return
     
     // Import court service dynamically to avoid SSR issues
@@ -165,7 +161,7 @@ export default function SettingsPage() {
     }
   }
 
-  const openEditCourt = (court: any) => {
+  const openEditCourt = (court: Record<string, unknown>) => {
     setSelectedCourt(court)
     setShowEditCourt(true)
   }
@@ -203,6 +199,85 @@ export default function SettingsPage() {
     autoReleaseMinutes: 10
   })
 
+  const [membershipTypes, setMembershipTypes] = useState([
+    {
+      id: '1',
+      name: 'Regular',
+      description: 'Standard membership with full access',
+      monthlyFee: 50,
+      initializationFee: 100,
+      courtBookingRate: 25,
+      features: ['Court booking', 'Tournament access', 'Club events'],
+      maxAdvanceBookingDays: 14,
+      maxActiveBookings: 3,
+      isActive: true
+    },
+    {
+      id: '2',
+      name: 'Premium',
+      description: 'Premium membership with priority access',
+      monthlyFee: 75,
+      initializationFee: 150,
+      courtBookingRate: 20,
+      features: ['Priority court booking', 'Free guest passes', 'Tournament access', 'Club events', 'Personal training discount'],
+      maxAdvanceBookingDays: 21,
+      maxActiveBookings: 5,
+      isActive: true
+    },
+    {
+      id: '3',
+      name: 'Student',
+      description: 'Discounted membership for students',
+      monthlyFee: 30,
+      initializationFee: 50,
+      courtBookingRate: 20,
+      features: ['Court booking', 'Tournament access', 'Club events'],
+      maxAdvanceBookingDays: 7,
+      maxActiveBookings: 2,
+      isActive: true
+    },
+    {
+      id: '4',
+      name: 'Social',
+      description: 'Event-only membership without court booking',
+      monthlyFee: 20,
+      initializationFee: 25,
+      courtBookingRate: 35,
+      features: ['Club events', 'Social activities'],
+      maxAdvanceBookingDays: 3,
+      maxActiveBookings: 1,
+      isActive: true
+    }
+  ])
+
+  const [pricingSettings, setPricingSettings] = useState({
+    courtBookingRates: {
+      peak: 30,
+      offPeak: 25,
+      weekend: 35
+    },
+    tournamentFees: {
+      individual: 25,
+      doubles: 40,
+      mixed: 35
+    },
+    lessonRates: {
+      individual: 60,
+      group: 25,
+      clinic: 15
+    },
+    guestFees: {
+      dayPass: 15,
+      courtHour: 10
+    },
+    lateFees: {
+      noShow: 25,
+      lateCancellation: 10
+    },
+    currency: 'USD',
+    taxRate: 8.5
+  })
+
 
   const handleSave = async (section: string) => {
     setSaveStatus('saving')
@@ -219,6 +294,10 @@ export default function SettingsPage() {
         success = await settingsService.updateNotificationSettings(mockUserId, notifications)
       } else if (section === 'system') {
         success = await settingsService.updateSystemSettings(systemSettings)
+      } else if (section === 'membership') {
+        success = await settingsService.updateMembershipTypes(membershipTypes)
+      } else if (section === 'pricing') {
+        success = await settingsService.updatePricingSettings(pricingSettings)
       }
       
       if (success) {
@@ -237,6 +316,8 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'club', label: 'Club Info', icon: Building2 },
+    { id: 'membership', label: 'Membership', icon: Users },
+    { id: 'pricing', label: 'Pricing', icon: CreditCard },
     { id: 'courts', label: 'Courts', icon: MapPin },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'system', label: 'System', icon: Settings },
@@ -751,6 +832,537 @@ export default function SettingsPage() {
     </div>
   )
 
+  const renderMembershipSettings = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Membership Types
+            </div>
+            <Button 
+              size="sm" 
+              className="flex items-center gap-2"
+              onClick={() => {
+                const newMembership = {
+                  id: Date.now().toString(),
+                  name: 'New Membership',
+                  description: '',
+                  monthlyFee: 0,
+                  initializationFee: 0,
+                  courtBookingRate: 25,
+                  features: [],
+                  maxAdvanceBookingDays: 14,
+                  maxActiveBookings: 3,
+                  isActive: true
+                }
+                setMembershipTypes([...membershipTypes, newMembership])
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Add Membership Type
+            </Button>
+          </CardTitle>
+          <CardDescription>
+            Configure membership types and their benefits
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {membershipTypes.map((membership, index) => (
+              <div key={membership.id} className="border rounded-lg p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor={`name-${membership.id}`}>Membership Name</Label>
+                    <Input 
+                      id={`name-${membership.id}`}
+                      value={membership.name}
+                      onChange={(e) => {
+                        const updated = [...membershipTypes]
+                        updated[index].name = e.target.value
+                        setMembershipTypes(updated)
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id={`active-${membership.id}`}
+                      checked={membership.isActive}
+                      onChange={(e) => {
+                        const updated = [...membershipTypes]
+                        updated[index].isActive = e.target.checked
+                        setMembershipTypes(updated)
+                      }}
+                      className="rounded"
+                    />
+                    <Label htmlFor={`active-${membership.id}`}>Active</Label>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <Label htmlFor={`description-${membership.id}`}>Description</Label>
+                  <Textarea 
+                    id={`description-${membership.id}`}
+                    value={membership.description}
+                    onChange={(e) => {
+                      const updated = [...membershipTypes]
+                      updated[index].description = e.target.value
+                      setMembershipTypes(updated)
+                    }}
+                    rows={2}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor={`monthlyFee-${membership.id}`}>Monthly Fee ($)</Label>
+                    <Input 
+                      id={`monthlyFee-${membership.id}`}
+                      type="number"
+                      value={membership.monthlyFee}
+                      onChange={(e) => {
+                        const updated = [...membershipTypes]
+                        updated[index].monthlyFee = parseFloat(e.target.value) || 0
+                        setMembershipTypes(updated)
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`initFee-${membership.id}`}>Initialization Fee ($)</Label>
+                    <Input 
+                      id={`initFee-${membership.id}`}
+                      type="number"
+                      value={membership.initializationFee}
+                      onChange={(e) => {
+                        const updated = [...membershipTypes]
+                        updated[index].initializationFee = parseFloat(e.target.value) || 0
+                        setMembershipTypes(updated)
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`courtRate-${membership.id}`}>Court Booking Rate ($)</Label>
+                    <Input 
+                      id={`courtRate-${membership.id}`}
+                      type="number"
+                      value={membership.courtBookingRate}
+                      onChange={(e) => {
+                        const updated = [...membershipTypes]
+                        updated[index].courtBookingRate = parseFloat(e.target.value) || 0
+                        setMembershipTypes(updated)
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor={`advanceDays-${membership.id}`}>Max Advance Booking Days</Label>
+                    <Input 
+                      id={`advanceDays-${membership.id}`}
+                      type="number"
+                      value={membership.maxAdvanceBookingDays}
+                      onChange={(e) => {
+                        const updated = [...membershipTypes]
+                        updated[index].maxAdvanceBookingDays = parseInt(e.target.value) || 0
+                        setMembershipTypes(updated)
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`maxBookings-${membership.id}`}>Max Active Bookings</Label>
+                    <Input 
+                      id={`maxBookings-${membership.id}`}
+                      type="number"
+                      value={membership.maxActiveBookings}
+                      onChange={(e) => {
+                        const updated = [...membershipTypes]
+                        updated[index].maxActiveBookings = parseInt(e.target.value) || 0
+                        setMembershipTypes(updated)
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <Label>Features</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {membership.features.map((feature, featureIndex) => (
+                      <Badge key={featureIndex} variant="secondary" className="flex items-center gap-1">
+                        {feature}
+                        <button
+                          onClick={() => {
+                            const updated = [...membershipTypes]
+                            updated[index].features.splice(featureIndex, 1)
+                            setMembershipTypes(updated)
+                          }}
+                          className="ml-1 hover:text-red-600"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const feature = prompt("Enter feature name:")
+                        if (feature) {
+                          const updated = [...membershipTypes]
+                          updated[index].features.push(feature)
+                          setMembershipTypes(updated)
+                        }
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => {
+                      if (confirm("Delete this membership type?")) {
+                        setMembershipTypes(membershipTypes.filter(m => m.id !== membership.id))
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="flex justify-end mt-6">
+            <Button 
+              onClick={() => handleSave('membership')}
+              disabled={saveStatus === 'saving'}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {saveStatus === 'saving' ? 'Saving...' : 'Save Membership Types'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+
+  const renderPricingSettings = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Pricing Configuration
+          </CardTitle>
+          <CardDescription>
+            Set rates for courts, tournaments, lessons and other services
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Court Booking Rates */}
+          <div>
+            <h4 className="font-medium mb-4">Court Booking Rates</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="peakRate">Peak Hours ($/hour)</Label>
+                <Input 
+                  id="peakRate"
+                  type="number"
+                  value={pricingSettings.courtBookingRates.peak}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    courtBookingRates: {
+                      ...pricingSettings.courtBookingRates,
+                      peak: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Monday-Friday 6-8am, 5-10pm</p>
+              </div>
+              <div>
+                <Label htmlFor="offPeakRate">Off-Peak Hours ($/hour)</Label>
+                <Input 
+                  id="offPeakRate"
+                  type="number"
+                  value={pricingSettings.courtBookingRates.offPeak}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    courtBookingRates: {
+                      ...pricingSettings.courtBookingRates,
+                      offPeak: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Monday-Friday 8am-5pm</p>
+              </div>
+              <div>
+                <Label htmlFor="weekendRate">Weekend Rate ($/hour)</Label>
+                <Input 
+                  id="weekendRate"
+                  type="number"
+                  value={pricingSettings.courtBookingRates.weekend}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    courtBookingRates: {
+                      ...pricingSettings.courtBookingRates,
+                      weekend: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Saturday-Sunday all day</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Tournament Fees */}
+          <div>
+            <h4 className="font-medium mb-4">Tournament Entry Fees</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="individualTournament">Individual ($)</Label>
+                <Input 
+                  id="individualTournament"
+                  type="number"
+                  value={pricingSettings.tournamentFees.individual}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    tournamentFees: {
+                      ...pricingSettings.tournamentFees,
+                      individual: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="doublesTournament">Doubles ($)</Label>
+                <Input 
+                  id="doublesTournament"
+                  type="number"
+                  value={pricingSettings.tournamentFees.doubles}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    tournamentFees: {
+                      ...pricingSettings.tournamentFees,
+                      doubles: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="mixedTournament">Mixed Doubles ($)</Label>
+                <Input 
+                  id="mixedTournament"
+                  type="number"
+                  value={pricingSettings.tournamentFees.mixed}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    tournamentFees: {
+                      ...pricingSettings.tournamentFees,
+                      mixed: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Lesson Rates */}
+          <div>
+            <h4 className="font-medium mb-4">Lesson Rates</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="individualLesson">Individual Lesson ($/hour)</Label>
+                <Input 
+                  id="individualLesson"
+                  type="number"
+                  value={pricingSettings.lessonRates.individual}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    lessonRates: {
+                      ...pricingSettings.lessonRates,
+                      individual: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="groupLesson">Group Lesson ($/person/hour)</Label>
+                <Input 
+                  id="groupLesson"
+                  type="number"
+                  value={pricingSettings.lessonRates.group}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    lessonRates: {
+                      ...pricingSettings.lessonRates,
+                      group: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="clinicRate">Clinic ($/person/session)</Label>
+                <Input 
+                  id="clinicRate"
+                  type="number"
+                  value={pricingSettings.lessonRates.clinic}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    lessonRates: {
+                      ...pricingSettings.lessonRates,
+                      clinic: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Guest Fees */}
+          <div>
+            <h4 className="font-medium mb-4">Guest Fees</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="dayPass">Day Pass ($)</Label>
+                <Input 
+                  id="dayPass"
+                  type="number"
+                  value={pricingSettings.guestFees.dayPass}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    guestFees: {
+                      ...pricingSettings.guestFees,
+                      dayPass: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="guestCourtHour">Guest Court Fee ($/hour)</Label>
+                <Input 
+                  id="guestCourtHour"
+                  type="number"
+                  value={pricingSettings.guestFees.courtHour}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    guestFees: {
+                      ...pricingSettings.guestFees,
+                      courtHour: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Late Fees */}
+          <div>
+            <h4 className="font-medium mb-4">Late Fees & Penalties</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="noShowFee">No-Show Fee ($)</Label>
+                <Input 
+                  id="noShowFee"
+                  type="number"
+                  value={pricingSettings.lateFees.noShow}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    lateFees: {
+                      ...pricingSettings.lateFees,
+                      noShow: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="lateCancellation">Late Cancellation Fee ($)</Label>
+                <Input 
+                  id="lateCancellation"
+                  type="number"
+                  value={pricingSettings.lateFees.lateCancellation}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    lateFees: {
+                      ...pricingSettings.lateFees,
+                      lateCancellation: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* General Settings */}
+          <div>
+            <h4 className="font-medium mb-4">General Settings</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="currency">Currency</Label>
+                <select 
+                  id="currency"
+                  value={pricingSettings.currency}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    currency: e.target.value
+                  })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="CAD">CAD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="AUD">AUD ($)</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                <Input 
+                  id="taxRate"
+                  type="number"
+                  step="0.1"
+                  value={pricingSettings.taxRate}
+                  onChange={(e) => setPricingSettings({
+                    ...pricingSettings,
+                    taxRate: parseFloat(e.target.value) || 0
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => handleSave('pricing')}
+              disabled={saveStatus === 'saving'}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {saveStatus === 'saving' ? 'Saving...' : 'Save Pricing Settings'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+
   const renderSecuritySettings = () => (
     <div className="space-y-6">
       <Card>
@@ -865,6 +1477,8 @@ export default function SettingsPage() {
 
         {/* Settings Content */}
         {activeTab === 'club' && renderClubSettings()}
+        {activeTab === 'membership' && renderMembershipSettings()}
+        {activeTab === 'pricing' && renderPricingSettings()}
         {activeTab === 'courts' && renderCourtSettings()}
         {activeTab === 'notifications' && renderNotificationSettings()}
         {activeTab === 'system' && renderSystemSettings()}

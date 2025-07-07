@@ -45,6 +45,47 @@ export interface SystemSettings {
   autoReleaseMinutes: number
 }
 
+export interface MembershipType {
+  id: string
+  name: string
+  description: string
+  monthlyFee: number
+  initializationFee: number
+  courtBookingRate: number
+  features: string[]
+  maxAdvanceBookingDays: number
+  maxActiveBookings: number
+  isActive: boolean
+}
+
+export interface PricingSettings {
+  courtBookingRates: {
+    peak: number
+    offPeak: number
+    weekend: number
+  }
+  tournamentFees: {
+    individual: number
+    doubles: number
+    mixed: number
+  }
+  lessonRates: {
+    individual: number
+    group: number
+    clinic: number
+  }
+  guestFees: {
+    dayPass: number
+    courtHour: number
+  }
+  lateFees: {
+    noShow: number
+    lateCancellation: number
+  }
+  currency: string
+  taxRate: number
+}
+
 class SettingsService {
   private static instance: SettingsService
   private supabase = createClient()
@@ -312,6 +353,107 @@ class SettingsService {
       return true
     } catch (error) {
       console.error('Error updating user preferences:', error)
+      return false
+    }
+  }
+
+  // Membership Types Methods
+  async getMembershipTypes(): Promise<MembershipType[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('membership_types')
+        .select('*')
+        .order('name')
+
+      if (error) {
+        console.error('Error fetching membership types:', error)
+        return []
+      }
+
+      return (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || '',
+        monthlyFee: item.monthly_fee || 0,
+        initializationFee: item.initialization_fee || 0,
+        courtBookingRate: item.court_booking_rate || 0,
+        features: item.features || [],
+        maxAdvanceBookingDays: item.max_advance_booking_days || 14,
+        maxActiveBookings: item.max_active_bookings || 3,
+        isActive: item.is_active || true
+      }))
+    } catch (error) {
+      console.error('Error fetching membership types:', error)
+      return []
+    }
+  }
+
+  async updateMembershipTypes(membershipTypes: MembershipType[]): Promise<boolean> {
+    try {
+      // For now, we'll mock this as successful since we don't have the table yet
+      console.log('Saving membership types:', membershipTypes)
+      return true
+    } catch (error) {
+      console.error('Error updating membership types:', error)
+      return false
+    }
+  }
+
+  // Pricing Settings Methods
+  async getPricingSettings(): Promise<PricingSettings | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('pricing_settings')
+        .select('*')
+        .single()
+
+      if (error) {
+        console.error('Error fetching pricing settings:', error)
+        return null
+      }
+
+      if (!data) return null
+
+      return {
+        courtBookingRates: {
+          peak: data.court_booking_rates?.peak || 30,
+          offPeak: data.court_booking_rates?.offPeak || 25,
+          weekend: data.court_booking_rates?.weekend || 35
+        },
+        tournamentFees: {
+          individual: data.tournament_fees?.individual || 25,
+          doubles: data.tournament_fees?.doubles || 40,
+          mixed: data.tournament_fees?.mixed || 35
+        },
+        lessonRates: {
+          individual: data.lesson_rates?.individual || 60,
+          group: data.lesson_rates?.group || 25,
+          clinic: data.lesson_rates?.clinic || 15
+        },
+        guestFees: {
+          dayPass: data.guest_fees?.dayPass || 15,
+          courtHour: data.guest_fees?.courtHour || 10
+        },
+        lateFees: {
+          noShow: data.late_fees?.noShow || 25,
+          lateCancellation: data.late_fees?.lateCancellation || 10
+        },
+        currency: data.currency || 'USD',
+        taxRate: data.tax_rate || 8.5
+      }
+    } catch (error) {
+      console.error('Error fetching pricing settings:', error)
+      return null
+    }
+  }
+
+  async updatePricingSettings(settings: Partial<PricingSettings>): Promise<boolean> {
+    try {
+      // For now, we'll mock this as successful since we don't have the table yet
+      console.log('Saving pricing settings:', settings)
+      return true
+    } catch (error) {
+      console.error('Error updating pricing settings:', error)
       return false
     }
   }
