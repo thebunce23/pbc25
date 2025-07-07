@@ -864,7 +864,7 @@ export default function SettingsPage() {
             </Button>
           </CardTitle>
           <CardDescription>
-            Configure membership types, fees, and booking privileges. Event-only members (Social) pay per event at rates set in each event.
+            Configure membership types, descriptions, fees, and booking privileges. Event-only members pay per event at rates set in each event.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -886,7 +886,7 @@ export default function SettingsPage() {
                 {membershipTypes.map((membership, index) => (
                   <tr key={membership.id} className="hover:bg-gray-50">
                     <td className="px-3 py-4">
-                      <div>
+                      <div className="space-y-2">
                         <Input 
                           value={membership.name}
                           onChange={(e) => {
@@ -895,26 +895,31 @@ export default function SettingsPage() {
                             setMembershipTypes(updated)
                           }}
                           className="font-medium text-sm"
+                          placeholder="Membership name"
                         />
-                        <p className="text-xs text-gray-500 mt-1">{membership.description}</p>
+                        <Input 
+                          value={membership.description}
+                          onChange={(e) => {
+                            const updated = [...membershipTypes]
+                            updated[index].description = e.target.value
+                            setMembershipTypes(updated)
+                          }}
+                          className="text-xs text-gray-600"
+                          placeholder="Description"
+                        />
                       </div>
                     </td>
                     <td className="px-3 py-4">
-                      <div className="flex flex-col gap-1">
-                        <Input 
-                          type="number"
-                          value={membership.monthlyFee}
-                          onChange={(e) => {
-                            const updated = [...membershipTypes]
-                            updated[index].monthlyFee = parseFloat(e.target.value) || 0
-                            setMembershipTypes(updated)
-                          }}
-                          className="w-20 text-sm"
-                        />
-                        {membership.monthlyFee === 0 && (
-                          <span className="text-xs text-blue-600 font-medium">Pay-to-play</span>
-                        )}
-                      </div>
+                      <Input 
+                        type="number"
+                        value={membership.monthlyFee}
+                        onChange={(e) => {
+                          const updated = [...membershipTypes]
+                          updated[index].monthlyFee = parseFloat(e.target.value) || 0
+                          setMembershipTypes(updated)
+                        }}
+                        className="w-20 text-sm"
+                      />
                     </td>
                     <td className="px-3 py-4">
                       <Input 
@@ -929,21 +934,16 @@ export default function SettingsPage() {
                       />
                     </td>
                     <td className="px-3 py-4">
-                      <div className="flex flex-col gap-1">
-                        <Input 
-                          type="number"
-                          value={membership.courtBookingRate}
-                          onChange={(e) => {
-                            const updated = [...membershipTypes]
-                            updated[index].courtBookingRate = parseFloat(e.target.value) || 0
-                            setMembershipTypes(updated)
-                          }}
-                          className="w-20 text-sm"
-                        />
-                        {membership.courtBookingRate === 0 && membership.monthlyFee === 0 && (
-                          <span className="text-xs text-orange-600 font-medium">Event pricing</span>
-                        )}
-                      </div>
+                      <Input 
+                        type="number"
+                        value={membership.courtBookingRate}
+                        onChange={(e) => {
+                          const updated = [...membershipTypes]
+                          updated[index].courtBookingRate = parseFloat(e.target.value) || 0
+                          setMembershipTypes(updated)
+                        }}
+                        className="w-20 text-sm"
+                      />
                     </td>
                     <td className="px-3 py-4">
                       <Input 
