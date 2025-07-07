@@ -239,13 +239,13 @@ export default function SettingsPage() {
     {
       id: '4',
       name: 'Social',
-      description: 'Pay-to-play membership (no monthly fees)',
+      description: 'Event-only membership (pricing set per event)',
       monthlyFee: 0,
       initializationFee: 25,
-      courtBookingRate: 35,
-      features: ['Pay per use', 'Club events', 'Social activities'],
-      maxAdvanceBookingDays: 3,
-      maxActiveBookings: 1,
+      courtBookingRate: 0,
+      features: ['Event participation', 'Social activities'],
+      maxAdvanceBookingDays: 0,
+      maxActiveBookings: 0,
       isActive: true
     }
   ])
@@ -864,7 +864,7 @@ export default function SettingsPage() {
             </Button>
           </CardTitle>
           <CardDescription>
-            Configure membership types, fees, and booking privileges. Set Monthly Fee to $0 for pay-to-play memberships.
+            Configure membership types, fees, and booking privileges. Event-only members (Social) pay per event at rates set in each event.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -929,16 +929,21 @@ export default function SettingsPage() {
                       />
                     </td>
                     <td className="px-3 py-4">
-                      <Input 
-                        type="number"
-                        value={membership.courtBookingRate}
-                        onChange={(e) => {
-                          const updated = [...membershipTypes]
-                          updated[index].courtBookingRate = parseFloat(e.target.value) || 0
-                          setMembershipTypes(updated)
-                        }}
-                        className="w-20 text-sm"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <Input 
+                          type="number"
+                          value={membership.courtBookingRate}
+                          onChange={(e) => {
+                            const updated = [...membershipTypes]
+                            updated[index].courtBookingRate = parseFloat(e.target.value) || 0
+                            setMembershipTypes(updated)
+                          }}
+                          className="w-20 text-sm"
+                        />
+                        {membership.courtBookingRate === 0 && membership.monthlyFee === 0 && (
+                          <span className="text-xs text-orange-600 font-medium">Event pricing</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-4">
                       <Input 
