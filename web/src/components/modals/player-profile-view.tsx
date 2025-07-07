@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useClubSettings } from '@/contexts/club-settings-context'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -182,10 +182,14 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
   const [activeTab, setActiveTab] = useState('overview')
   const { formatPhoneNumber, formatDate } = useClubSettings()
 
-  if (!player) return null
+  // Reset tab when player changes
+  React.useEffect(() => {
+    if (player) {
+      setActiveTab('overview')
+    }
+  }, [player?.id])
 
-  // Debug logging
-  console.log('Player data in modal:', player)
+  if (!player) return null
 
   const fullAddress = player.address ? [
     player.address.street,
@@ -234,19 +238,19 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[1000px] max-w-[95vw] max-h-[85vh] top-[7.5vh] translate-y-0 overflow-hidden flex flex-col">
+      <DialogContent key={player.id} className="w-[1000px] max-w-[95vw] max-h-[85vh] top-[7.5vh] translate-y-0 overflow-hidden flex flex-col">
         <DialogHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={player.avatar} alt={`${player.first_name || 'Unknown'} ${player.last_name || 'Player'}`} />
+                <AvatarImage src={player.avatar} alt={`${player.first_name} ${player.last_name}`} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-lg font-semibold">
-                  {getInitials(player.first_name || 'U', player.last_name || 'P')}
+                  {getInitials(player.first_name, player.last_name)}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <DialogTitle className="text-2xl font-bold">
-                  {player.first_name || 'Unknown'} {player.last_name || 'Player'}
+                  {player.first_name} {player.last_name}
                 </DialogTitle>
                 <DialogDescription className="text-base">
                   {player.skill_level} • Member since {formatDate(player.join_date)}
