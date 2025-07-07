@@ -41,6 +41,7 @@ const playerSchema = z.object({
   emergencyContactPhone: z.string().optional(),
   skillLevel: z.number().min(1).max(5).optional(),
   membershipStatus: z.enum(['active', 'inactive', 'trial', 'suspended']),
+  membershipType: z.enum(['Regular', 'Premium', 'Trial', 'Social']),
   healthConditions: z.string().optional(),
   waiverSigned: z.boolean(),
 })
@@ -89,18 +90,19 @@ export default function EditPlayerForm({ open, onOpenChange, onSubmit, player }:
     resolver: zodResolver(playerSchema),
     defaultValues: {
       membershipStatus: 'active',
+      membershipType: 'Regular',
       address: {},
       waiverSigned: false,
     },
   })
 
   const membershipStatus = watch('membershipStatus')
+  const membershipType = watch('membershipType')
   const waiverSigned = watch('waiverSigned')
 
   // Reset form when player changes
   useEffect(() => {
     if (player) {
-      console.log('Edit form received player:', player)
       setValue('firstName', player.first_name)
       setValue('lastName', player.last_name)
       setValue('email', player.email || '')
@@ -119,6 +121,7 @@ export default function EditPlayerForm({ open, onOpenChange, onSubmit, player }:
       }
       setValue('skillLevel', skillLevelMap[player.skill_level] || 1)
       setValue('membershipStatus', player.status as any)
+      setValue('membershipType', player.membership_type as any)
       setValue('healthConditions', player.medical_info || '')
       setValue('waiverSigned', player.waiverSigned || false)
     }
@@ -263,7 +266,7 @@ export default function EditPlayerForm({ open, onOpenChange, onSubmit, player }:
           </div>
 
           {/* Skill Level and Membership */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="skillLevel">Skill Level</Label>
               <Select onValueChange={(value) => setValue('skillLevel', parseFloat(value))}>
@@ -298,6 +301,24 @@ export default function EditPlayerForm({ open, onOpenChange, onSubmit, player }:
                   <SelectItem value="trial">Trial</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="membershipType">Membership Type</Label>
+              <Select
+                value={membershipType}
+                onValueChange={(value) => setValue('membershipType', value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select membership type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Regular">Regular</SelectItem>
+                  <SelectItem value="Premium">Premium</SelectItem>
+                  <SelectItem value="Social">Social</SelectItem>
+                  <SelectItem value="Trial">Trial</SelectItem>
                 </SelectContent>
               </Select>
             </div>

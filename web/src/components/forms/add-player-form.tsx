@@ -41,6 +41,7 @@ const playerSchema = z.object({
   emergencyContactPhone: z.string().optional(),
   skillLevel: z.number().min(1).max(5).optional(),
   membershipStatus: z.enum(['active', 'inactive', 'trial', 'suspended']),
+  membershipType: z.enum(['Regular', 'Premium', 'Trial', 'Social']),
   healthConditions: z.string().optional(),
 })
 
@@ -68,11 +69,13 @@ export default function AddPlayerForm({ open, onOpenChange, onSubmit }: AddPlaye
     resolver: zodResolver(playerSchema),
     defaultValues: {
       membershipStatus: 'active',
+      membershipType: 'Regular',
       address: {},
     },
   })
 
   const membershipStatus = watch('membershipStatus')
+  const membershipType = watch('membershipType')
 
   const handleFormSubmit = async (data: PlayerFormData) => {
     setIsLoading(true)
@@ -212,7 +215,7 @@ export default function AddPlayerForm({ open, onOpenChange, onSubmit }: AddPlaye
           </div>
 
           {/* Skill Level and Membership */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="skillLevel">Skill Level</Label>
               <Select onValueChange={(value) => setValue('skillLevel', parseFloat(value))}>
@@ -247,6 +250,24 @@ export default function AddPlayerForm({ open, onOpenChange, onSubmit }: AddPlaye
                   <SelectItem value="trial">Trial</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="membershipType">Membership Type</Label>
+              <Select
+                value={membershipType}
+                onValueChange={(value) => setValue('membershipType', value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select membership type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Regular">Regular</SelectItem>
+                  <SelectItem value="Premium">Premium</SelectItem>
+                  <SelectItem value="Social">Social</SelectItem>
+                  <SelectItem value="Trial">Trial</SelectItem>
                 </SelectContent>
               </Select>
             </div>
