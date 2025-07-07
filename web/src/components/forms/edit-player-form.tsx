@@ -49,26 +49,21 @@ type PlayerFormData = z.infer<typeof playerSchema>
 
 interface Player {
   id: string
-  firstName: string
-  lastName: string
+  first_name: string
+  last_name: string
   email: string
-  phone: string
-  skillLevel: number
-  membershipStatus: string
-  waiverSigned: boolean
-  dateJoined: string
-  matchesPlayed: number
-  winRate: number
-  address?: {
-    street?: string
-    city?: string
-    state?: string
-    zipCode?: string
-    [key: string]: string | undefined
-  }
-  emergencyContactName?: string
-  emergencyContactPhone?: string
-  healthConditions?: string
+  phone?: string
+  skill_level: string
+  status: string
+  membership_type?: string
+  waiverSigned?: boolean
+  join_date: string
+  matchesPlayed?: number
+  winRate?: number
+  address?: any
+  emergency_contact?: any
+  medical_info?: string
+  notes?: string
 }
 
 interface EditPlayerFormProps {
@@ -105,17 +100,27 @@ export default function EditPlayerForm({ open, onOpenChange, onSubmit, player }:
   // Reset form when player changes
   useEffect(() => {
     if (player) {
-      setValue('firstName', player.firstName)
-      setValue('lastName', player.lastName)
+      console.log('Edit form received player:', player)
+      setValue('firstName', player.first_name)
+      setValue('lastName', player.last_name)
       setValue('email', player.email || '')
       setValue('phone', player.phone || '')
       setValue('address', player.address || {})
-      setValue('emergencyContactName', player.emergencyContactName || '')
-      setValue('emergencyContactPhone', player.emergencyContactPhone || '')
-      setValue('skillLevel', player.skillLevel || undefined)
-      setValue('membershipStatus', player.membershipStatus as any)
-      setValue('healthConditions', player.healthConditions || '')
-      setValue('waiverSigned', player.waiverSigned)
+      // Extract emergency contact from database object
+      const emergencyContact = player.emergency_contact || {}
+      setValue('emergencyContactName', emergencyContact.name || '')
+      setValue('emergencyContactPhone', emergencyContact.phone || '')
+      // Convert skill level string to number for form
+      const skillLevelMap: { [key: string]: number } = {
+        'Beginner': 1,
+        'Intermediate': 2, 
+        'Advanced': 3,
+        'Professional': 4
+      }
+      setValue('skillLevel', skillLevelMap[player.skill_level] || 1)
+      setValue('membershipStatus', player.status as any)
+      setValue('healthConditions', player.medical_info || '')
+      setValue('waiverSigned', player.waiverSigned || false)
     }
   }, [player, setValue])
 
@@ -147,7 +152,7 @@ export default function EditPlayerForm({ open, onOpenChange, onSubmit, player }:
         <DialogHeader>
           <DialogTitle>Edit Player</DialogTitle>
           <DialogDescription>
-            Update {player.firstName} {player.lastName}'s information.
+            Update {player.first_name} {player.last_name}'s information.
           </DialogDescription>
         </DialogHeader>
 
