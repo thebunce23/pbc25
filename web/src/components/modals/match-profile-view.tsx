@@ -140,7 +140,7 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[800px] max-w-[95vw] h-auto max-h-[90vh] overflow-hidden flex flex-col fixed top-[5vh] left-1/2 transform -translate-x-1/2">
         <DialogHeader>
           <div className="flex items-start justify-between pr-8">
             <div>
@@ -163,7 +163,8 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
           </div>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-6 p-1">
           {/* Status Overview */}
           <div className="flex items-center gap-4">
             <Badge className={statusColors[match.status as keyof typeof statusColors]}>
@@ -362,6 +363,7 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
               </div>
             </CardContent>
           </Card>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

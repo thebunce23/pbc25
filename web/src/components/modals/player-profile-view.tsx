@@ -231,7 +231,7 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[1000px] max-w-[95vw] h-auto max-h-[90vh] overflow-hidden flex flex-col fixed top-[5vh] left-1/2 transform -translate-x-1/2">
         <DialogHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
@@ -273,7 +273,8 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex-1 overflow-y-auto">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="matches">Match History</TabsTrigger>
@@ -602,7 +603,8 @@ export default function PlayerProfileView({ open, onOpenChange, player, onEdit }
               </Card>
             )}
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   )

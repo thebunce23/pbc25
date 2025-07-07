@@ -77,7 +77,7 @@ const CourtProfileView: React.FC<CourtProfileViewProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[800px] max-w-[95vw] h-auto max-h-[90vh] overflow-hidden flex flex-col fixed top-[5vh] left-1/2 transform -translate-x-1/2">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
@@ -90,7 +90,8 @@ const CourtProfileView: React.FC<CourtProfileViewProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-6 p-1">
           {/* Court Details */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -238,6 +239,7 @@ const CourtProfileView: React.FC<CourtProfileViewProps> = ({
               Delete Court
             </Button>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>
