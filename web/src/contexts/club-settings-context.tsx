@@ -9,13 +9,14 @@ export const countries = [
     name: 'United States',
     flag: '🇺🇸',
     phonePrefix: '+1',
+    currency: 'USD',
     addressFormat: ['street', 'city', 'state', 'zipCode'],
     timezones: [
-      { value: 'America/New_York', label: 'Eastern Time (ET)' },
-      { value: 'America/Chicago', label: 'Central Time (CT)' },
-      { value: 'America/Denver', label: 'Mountain Time (MT)' },
-      { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-      { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
+      { value: 'America/New_York', label: 'Eastern Time (EST/EDT)' },
+      { value: 'America/Chicago', label: 'Central Time (CST/CDT)' },
+      { value: 'America/Denver', label: 'Mountain Time (MST/MDT)' },
+      { value: 'America/Los_Angeles', label: 'Pacific Time (PST/PDT)' },
+      { value: 'America/Anchorage', label: 'Alaska Time (AKST/AKDT)' },
       { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' }
     ]
   },
@@ -24,14 +25,15 @@ export const countries = [
     name: 'Canada',
     flag: '🇨🇦',
     phonePrefix: '+1',
+    currency: 'CAD',
     addressFormat: ['street', 'city', 'province', 'postalCode'],
     timezones: [
-      { value: 'America/St_Johns', label: 'Newfoundland Time (NT)' },
-      { value: 'America/Halifax', label: 'Atlantic Time (AT)' },
-      { value: 'America/Toronto', label: 'Eastern Time (ET)' },
-      { value: 'America/Winnipeg', label: 'Central Time (CT)' },
-      { value: 'America/Edmonton', label: 'Mountain Time (MT)' },
-      { value: 'America/Vancouver', label: 'Pacific Time (PT)' }
+      { value: 'America/St_Johns', label: 'Newfoundland Time (NST/NDT)' },
+      { value: 'America/Halifax', label: 'Atlantic Time (AST/ADT)' },
+      { value: 'America/Toronto', label: 'Eastern Time (EST/EDT)' },
+      { value: 'America/Winnipeg', label: 'Central Time (CST/CDT)' },
+      { value: 'America/Edmonton', label: 'Mountain Time (MST/MDT)' },
+      { value: 'America/Vancouver', label: 'Pacific Time (PST/PDT)' }
     ]
   },
   {
@@ -39,9 +41,10 @@ export const countries = [
     name: 'United Kingdom',
     flag: '🇬🇧',
     phonePrefix: '+44',
+    currency: 'GBP',
     addressFormat: ['street', 'city', 'county', 'postcode'],
     timezones: [
-      { value: 'Europe/London', label: 'Greenwich Mean Time (GMT)' }
+      { value: 'Europe/London', label: 'British Time (GMT/BST)' }
     ]
   },
   {
@@ -49,14 +52,16 @@ export const countries = [
     name: 'Australia',
     flag: '🇦🇺',
     phonePrefix: '+61',
+    currency: 'AUD',
     addressFormat: ['street', 'city', 'state', 'postcode'],
     timezones: [
-      { value: 'Australia/Perth', label: 'Australian Western Time (AWST)' },
-      { value: 'Australia/Adelaide', label: 'Australian Central Time (ACST)' },
-      { value: 'Australia/Darwin', label: 'Australian Central Time (ACST)' },
-      { value: 'Australia/Brisbane', label: 'Australian Eastern Time (AEST)' },
-      { value: 'Australia/Sydney', label: 'Australian Eastern Time (AEST)' },
-      { value: 'Australia/Melbourne', label: 'Australian Eastern Time (AEST)' }
+      { value: 'Australia/Perth', label: 'Western Australia (AWST/AWDT)' },
+      { value: 'Australia/Adelaide', label: 'South Australia (ACST/ACDT)' },
+      { value: 'Australia/Darwin', label: 'Northern Territory (ACST)' },
+      { value: 'Australia/Brisbane', label: 'Queensland (AEST)' },
+      { value: 'Australia/Sydney', label: 'New South Wales (AEST/AEDT)' },
+      { value: 'Australia/Melbourne', label: 'Victoria (AEST/AEDT)' },
+      { value: 'Australia/Hobart', label: 'Tasmania (AEST/AEDT)' }
     ]
   },
   {
@@ -64,9 +69,10 @@ export const countries = [
     name: 'New Zealand',
     flag: '🇳🇿',
     phonePrefix: '+64',
+    currency: 'NZD',
     addressFormat: ['street', 'city', 'region', 'postcode'],
     timezones: [
-      { value: 'Pacific/Auckland', label: 'New Zealand Time (NZST)' }
+      { value: 'Pacific/Auckland', label: 'New Zealand (NZST/NZDT)' }
     ]
   },
   {
@@ -74,9 +80,10 @@ export const countries = [
     name: 'Germany',
     flag: '🇩🇪',
     phonePrefix: '+49',
+    currency: 'EUR',
     addressFormat: ['street', 'city', 'state', 'zipCode'],
     timezones: [
-      { value: 'Europe/Berlin', label: 'Central European Time (CET)' }
+      { value: 'Europe/Berlin', label: 'Central European Time (CET/CEST)' }
     ]
   },
   {
@@ -84,9 +91,10 @@ export const countries = [
     name: 'France',
     flag: '🇫🇷',
     phonePrefix: '+33',
+    currency: 'EUR',
     addressFormat: ['street', 'city', 'region', 'zipCode'],
     timezones: [
-      { value: 'Europe/Paris', label: 'Central European Time (CET)' }
+      { value: 'Europe/Paris', label: 'Central European Time (CET/CEST)' }
     ]
   },
   {
@@ -94,10 +102,11 @@ export const countries = [
     name: 'Spain',
     flag: '🇪🇸',
     phonePrefix: '+34',
+    currency: 'EUR',
     addressFormat: ['street', 'city', 'region', 'zipCode'],
     timezones: [
-      { value: 'Europe/Madrid', label: 'Central European Time (CET)' },
-      { value: 'Atlantic/Canary', label: 'Western European Time (WET)' }
+      { value: 'Europe/Madrid', label: 'Central European Time (CET/CEST)' },
+      { value: 'Atlantic/Canary', label: 'Western European Time (WET/WEST)' }
     ]
   },
   {
@@ -105,9 +114,10 @@ export const countries = [
     name: 'Italy',
     flag: '🇮🇹',
     phonePrefix: '+39',
+    currency: 'EUR',
     addressFormat: ['street', 'city', 'region', 'zipCode'],
     timezones: [
-      { value: 'Europe/Rome', label: 'Central European Time (CET)' }
+      { value: 'Europe/Rome', label: 'Central European Time (CET/CEST)' }
     ]
   },
   {
@@ -115,6 +125,7 @@ export const countries = [
     name: 'Japan',
     flag: '🇯🇵',
     phonePrefix: '+81',
+    currency: 'JPY',
     addressFormat: ['prefecture', 'city', 'street', 'zipCode'],
     timezones: [
       { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' }
@@ -125,9 +136,58 @@ export const countries = [
     name: 'Singapore',
     flag: '🇸🇬',
     phonePrefix: '+65',
+    currency: 'SGD',
     addressFormat: ['street', 'district', 'city', 'postalCode'],
     timezones: [
       { value: 'Asia/Singapore', label: 'Singapore Time (SGT)' }
+    ]
+  },
+  {
+    code: 'IN',
+    name: 'India',
+    flag: '🇮🇳',
+    phonePrefix: '+91',
+    currency: 'INR',
+    addressFormat: ['street', 'city', 'state', 'pinCode'],
+    timezones: [
+      { value: 'Asia/Kolkata', label: 'India Standard Time (IST)' }
+    ]
+  },
+  {
+    code: 'ZA',
+    name: 'South Africa',
+    flag: '🇿🇦',
+    phonePrefix: '+27',
+    currency: 'ZAR',
+    addressFormat: ['street', 'city', 'province', 'postalCode'],
+    timezones: [
+      { value: 'Africa/Johannesburg', label: 'South Africa Standard Time (SAST)' }
+    ]
+  },
+  {
+    code: 'BR',
+    name: 'Brazil',
+    flag: '🇧🇷',
+    phonePrefix: '+55',
+    currency: 'BRL',
+    addressFormat: ['street', 'city', 'state', 'cep'],
+    timezones: [
+      { value: 'America/Sao_Paulo', label: 'Brasília Time (BRT/BRST)' },
+      { value: 'America/Manaus', label: 'Amazon Time (AMT/AMST)' },
+      { value: 'America/Noronha', label: 'Fernando de Noronha Time (FNT)' }
+    ]
+  },
+  {
+    code: 'MX',
+    name: 'Mexico',
+    flag: '🇲🇽',
+    phonePrefix: '+52',
+    currency: 'MXN',
+    addressFormat: ['street', 'city', 'state', 'postalCode'],
+    timezones: [
+      { value: 'America/Mexico_City', label: 'Central Time (CST/CDT)' },
+      { value: 'America/Tijuana', label: 'Pacific Time (PST/PDT)' },
+      { value: 'America/Cancun', label: 'Eastern Time (EST)' }
     ]
   }
 ]
@@ -169,38 +229,48 @@ interface ClubSettingsContextType {
   formatPhoneNumber: (phone: string, countryCode?: string) => string
   formatDate: (date: Date | string) => string
   formatTime: (time: Date | string) => string
+  formatCurrency: (amount: number) => string
+  getCurrencySymbol: () => string
 }
 
 const ClubSettingsContext = createContext<ClubSettingsContextType | undefined>(undefined)
 
 export function ClubSettingsProvider({ children }: { children: ReactNode }) {
-  const getDefaultSettings = (): ClubSettings => ({
-    name: 'Sunshine Pickleball Club',
-    description: 'A friendly community pickleball club welcoming players of all skill levels.',
-    country: 'US',
-    address: {
-      street: '123 Recreation Way',
-      city: 'Sunny City',
-      state: 'California',
-      zipCode: '90210'
-    },
-    phone: '(555) 123-4567',
-    email: 'info@sunshinepcb.com',
-    website: 'https://sunshinepcb.com',
-    timezone: 'America/Los_Angeles',
-    currency: 'USD',
-    dateFormat: 'MM/dd/yyyy',
-    timeFormat: '12h',
-    operatingHours: {
-      monday: { open: '06:00', close: '22:00', closed: false },
-      tuesday: { open: '06:00', close: '22:00', closed: false },
-      wednesday: { open: '06:00', close: '22:00', closed: false },
-      thursday: { open: '06:00', close: '22:00', closed: false },
-      friday: { open: '06:00', close: '22:00', closed: false },
-      saturday: { open: '07:00', close: '20:00', closed: false },
-      sunday: { open: '08:00', close: '18:00', closed: false }
+  const getCountryCurrency = (countryCode: string): string => {
+    const country = countries.find(c => c.code === countryCode)
+    return country?.currency || 'USD'
+  }
+
+  const getDefaultSettings = (): ClubSettings => {
+    const defaultCountry = 'US'
+    return {
+      name: 'Sunshine Pickleball Club',
+      description: 'A friendly community pickleball club welcoming players of all skill levels.',
+      country: defaultCountry,
+      address: {
+        street: '123 Recreation Way',
+        city: 'Sunny City',
+        state: 'California',
+        zipCode: '90210'
+      },
+      phone: '(555) 123-4567',
+      email: 'info@sunshinepcb.com',
+      website: 'https://sunshinepcb.com',
+      timezone: 'America/Los_Angeles',
+      currency: getCountryCurrency(defaultCountry),
+      dateFormat: 'MM/dd/yyyy',
+      timeFormat: '12h',
+      operatingHours: {
+        monday: { open: '06:00', close: '22:00', closed: false },
+        tuesday: { open: '06:00', close: '22:00', closed: false },
+        wednesday: { open: '06:00', close: '22:00', closed: false },
+        thursday: { open: '06:00', close: '22:00', closed: false },
+        friday: { open: '06:00', close: '22:00', closed: false },
+        saturday: { open: '07:00', close: '20:00', closed: false },
+        sunday: { open: '08:00', close: '18:00', closed: false }
+      }
     }
-  })
+  }
 
   const [clubSettings, setClubSettings] = useState<ClubSettings>(getDefaultSettings())
 
@@ -211,6 +281,24 @@ export function ClubSettingsProvider({ children }: { children: ReactNode }) {
         const { default: settingsService } = await import('@/lib/services/settings-service')
         const settings = await settingsService.getClubSettings()
         if (settings) {
+          // Auto-set currency based on country if currency hasn't been explicitly set
+          const country = countries.find(c => c.code === settings.country)
+          if (country && country.currency) {
+            const expectedCurrency = country.currency
+            // Auto-update currency if:
+            // 1. No currency is set, OR  
+            // 2. Currency is still the database default 'USD' but country is not US
+            const shouldUpdateCurrency = 
+              !settings.currency || 
+              (settings.currency === 'USD' && settings.country !== 'US')
+              
+            if (shouldUpdateCurrency) {
+              console.log(`Auto-updating currency from ${settings.currency || 'none'} to ${expectedCurrency} for country ${settings.country}`)
+              settings.currency = expectedCurrency
+              // Save the updated currency back to the database
+              await settingsService.updateClubSettings(settings)
+            }
+          }
           setClubSettings(settings)
         }
       } catch (error) {
@@ -225,11 +313,16 @@ export function ClubSettingsProvider({ children }: { children: ReactNode }) {
     setClubSettings(prev => {
       const updated = { ...prev, ...newSettings }
       
-      // If country is changing, automatically update timezone to first available
+      // If country is changing, automatically update timezone and currency
       if (newSettings.country && newSettings.country !== prev.country) {
         const country = countries.find(c => c.code === newSettings.country)
-        if (country && country.timezones.length > 0) {
-          updated.timezone = country.timezones[0].value
+        if (country) {
+          if (country.timezones.length > 0) {
+            updated.timezone = country.timezones[0].value
+          }
+          if (country.currency) {
+            updated.currency = country.currency
+          }
         }
       }
       
@@ -331,6 +424,44 @@ export function ClubSettingsProvider({ children }: { children: ReactNode }) {
     return timeObj.toLocaleTimeString(undefined, options)
   }
 
+  const getCurrencySymbol = () => {
+    const currencySymbols: Record<string, string> = {
+      USD: '$',
+      CAD: '$',
+      EUR: '€',
+      GBP: '£',
+      AUD: '$',
+      NZD: '$',
+      JPY: '¥',
+      SGD: '$',
+      INR: '₹',
+      ZAR: 'R',
+      BRL: 'R$',
+      MXN: '$'
+    }
+    return currencySymbols[clubSettings.currency] || '$'
+  }
+
+  const formatCurrency = (amount: number) => {
+    if (isNaN(amount)) return getCurrencySymbol() + '0'
+    
+    // For currencies that don't typically show decimals
+    const noDecimalCurrencies = ['JPY']
+    const minimumFractionDigits = noDecimalCurrencies.includes(clubSettings.currency) ? 0 : 2
+    
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: clubSettings.currency,
+        minimumFractionDigits,
+        maximumFractionDigits: noDecimalCurrencies.includes(clubSettings.currency) ? 0 : 2
+      }).format(amount)
+    } catch (error) {
+      // Fallback if currency is not supported
+      return getCurrencySymbol() + amount.toFixed(minimumFractionDigits)
+    }
+  }
+
   const value = {
     clubSettings,
     updateClubSettings,
@@ -340,7 +471,9 @@ export function ClubSettingsProvider({ children }: { children: ReactNode }) {
     getAddressLabels,
     formatPhoneNumber,
     formatDate,
-    formatTime
+    formatTime,
+    formatCurrency,
+    getCurrencySymbol
   }
 
   return (

@@ -31,21 +31,12 @@ A comprehensive multi-tenant pickleball club management platform built with Next
 - **Recent Activity**: Live updates on club activities
 - **Performance Metrics**: Court utilization, player engagement
 
-### 🏆 Team Management System
-- **Auto-Expanding Team IDs**: Support for unlimited teams beyond A vs B format
-- **Dynamic Team Generation**: Automatically generates team IDs A-Z based on need
-- **Smart Team Assignment**: Optimal team size calculation (3-6 players per team)
-- **Team Color System**: Predefined color palette with extensible design
-- **Balanced Team Creation**: Skill-level distribution and fair team formation
-- **Round Robin Support**: Full tournament management with team-based matches
-
 ### 🎨 User Interface
 - **Modern Design**: Clean, responsive interface built with Tailwind CSS
 - **Mobile-First**: Optimized for all device sizes
 - **Dark Mode**: Ready for dark theme implementation
 - **Accessible**: WCAG compliant design patterns
 - **Form Validation**: Comprehensive form validation with Zod
-- **Team Color Coding**: Visual team identification with consistent color schemes
 
 ## Tech Stack
 

@@ -45,17 +45,7 @@ const matchSchema = z.object({
 
 type MatchFormData = z.infer<typeof matchSchema>
 
-interface Player {
-  id: string
-  first_name: string
-  last_name: string
-  skill_level: string
-}
-
-interface Participant {
-  player: Player
-  team: 'A' | 'B'
-}
+import { Player, Participant, TeamId, DEFAULT_TEAM_A, DEFAULT_TEAM_B } from '@/types/match'
 
 interface Match {
   id: string
@@ -212,8 +202,15 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
   // if (!match) return null
 
   // Helper function to safely get player names from participants
-  const getPlayerFromParticipants = (team: 'A' | 'B') => {
-    return match.participants?.find(p => p.team === team)?.player
+  const getPlayerFromParticipants = (team: TeamId) => {
+    return match?.participants?.find(p => p.team === team)?.player
+  }
+  
+  // Get all teams in the match
+  const getTeamsInMatch = () => {
+    if (!match?.participants) return [];
+    const teams = new Set(match.participants.map(p => p.team));
+    return Array.from(teams);
   }
 
   const getPlayerName = (playerId: string) => {
@@ -229,15 +226,18 @@ export default function EditMatchForm({ open, onOpenChange, onSubmit, match }: E
           <DialogDescription>
             {(() => {
               if (match) {
-                const teamAPlayer = getPlayerFromParticipants('A')
-                const teamBPlayer = getPlayerFromParticipants('B')
-                if (teamAPlayer && teamBPlayer) {
-                  return `Update match details for ${teamAPlayer.first_name} ${teamAPlayer.last_name} vs ${teamBPlayer.first_name} ${teamBPlayer.last_name}`
+                const teamsInMatch = getTeamsInMatch();
+                if (teamsInMatch.length >= 2) {
+                  const team1Player = getPlayerFromParticipants(teamsInMatch[0]);
+                  const team2Player = getPlayerFromParticipants(teamsInMatch[1]);
+                  if (team1Player && team2Player) {
+                    return `Update match details for ${team1Player.first_name} ${team1Player.last_name} vs ${team2Player.first_name} ${team2Player.last_name}`;
+                  }
                 }
-                return `Update match details for ${match.title || 'this match'}`
+                return `Update match details for ${match.title || 'this match'}`;
               }
-              return 'Update match details'
-            })()} 
+              return 'Update match details';
+            })()}
           </DialogDescription>
         </DialogHeader>
 

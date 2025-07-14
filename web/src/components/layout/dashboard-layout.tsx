@@ -119,6 +119,20 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
             {navigation.map((item) => {
               const Icon = item.icon
               const isActive = typeof window !== 'undefined' && window.location.pathname === item.href
+              const isDisabled = item.name === 'Messages' || item.name === 'Reports'
+              
+              if (isDisabled) {
+                return (
+                  <div
+                    key={item.name}
+                    className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-400 cursor-not-allowed opacity-60"
+                  >
+                    <Icon className="mr-3 h-5 w-5 flex-shrink-0 text-gray-300" />
+                    {item.name}
+                  </div>
+                )
+              }
+              
               return (
                 <a
                   key={item.name}

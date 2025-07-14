@@ -35,13 +35,17 @@ import {
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('club')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [membershipEditMode, setMembershipEditMode] = useState(false)
+  const [systemEditMode, setSystemEditMode] = useState(false)
+  const [clubEditMode, setClubEditMode] = useState(false)
   const { 
     clubSettings, 
     updateClubSettings, 
     getCountryTimezones, 
     getCountryPhonePrefix, 
     getAddressLabels, 
-    formatPhoneNumber 
+    formatPhoneNumber,
+    getCurrencySymbol 
   } = useClubSettings()
 
   const [courts, setCourts] = useState([
@@ -274,7 +278,6 @@ export default function SettingsPage() {
       noShow: 25,
       lateCancellation: 10
     },
-    currency: 'USD',
     taxRate: 8.5
   })
 
@@ -327,9 +330,29 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Club Information
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Club Information
+            </div>
+            {!clubEditMode ? (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setClubEditMode(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setClubEditMode(false)}
+              >
+                Cancel
+              </Button>
+            )}
           </CardTitle>
           <CardDescription>
             Basic information about your pickleball club
@@ -340,37 +363,55 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="clubName">Club Name</Label>
-              <Input 
-                id="clubName"
-                value={clubSettings.name}
-                onChange={(e) => updateClubSettings({name: e.target.value})}
-              />
+              {clubEditMode ? (
+                <Input 
+                  id="clubName"
+                  value={clubSettings.name}
+                  onChange={(e) => updateClubSettings({name: e.target.value})}
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {clubSettings.name}
+                </div>
+              )}
             </div>
             <div>
               <Label htmlFor="country">Country</Label>
-              <select 
-                id="country"
-                value={clubSettings.country}
-                onChange={(e) => updateClubSettings({country: e.target.value})}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                {countries.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.flag} {country.name}
-                  </option>
-                ))}
-              </select>
+              {clubEditMode ? (
+                <select 
+                  id="country"
+                  value={clubSettings.country}
+                  onChange={(e) => updateClubSettings({country: e.target.value})}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {countries.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.flag} {country.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {countries.find(c => c.code === clubSettings.country)?.flag} {countries.find(c => c.code === clubSettings.country)?.name}
+                </div>
+              )}
             </div>
           </div>
           
           <div>
             <Label htmlFor="description">Description</Label>
-            <Textarea 
-              id="description"
-              value={clubSettings.description}
-              onChange={(e) => updateClubSettings({description: e.target.value})}
-              rows={3}
-            />
+            {clubEditMode ? (
+              <Textarea 
+                id="description"
+                value={clubSettings.description}
+                onChange={(e) => updateClubSettings({description: e.target.value})}
+                rows={3}
+              />
+            ) : (
+              <div className="min-h-[80px] px-3 py-2 border rounded-md bg-gray-50 text-sm">
+                {clubSettings.description || 'No description provided'}
+              </div>
+            )}
           </div>
 
           {/* Country-aware Address Fields */}
@@ -380,17 +421,23 @@ export default function SettingsPage() {
               {getAddressLabels().map(({ field, label }) => (
                 <div key={field}>
                   <Label htmlFor={field} className="text-sm text-muted-foreground">{label}</Label>
-                  <Input 
-                    id={field}
-                    value={clubSettings.address[field as keyof typeof clubSettings.address] || ''}
-                    onChange={(e) => updateClubSettings({
-                      address: {
-                        ...clubSettings.address,
-                        [field]: e.target.value
-                      }
-                    })}
-                    placeholder={`Enter ${label.toLowerCase()}`}
-                  />
+                  {clubEditMode ? (
+                    <Input 
+                      id={field}
+                      value={clubSettings.address[field as keyof typeof clubSettings.address] || ''}
+                      onChange={(e) => updateClubSettings({
+                        address: {
+                          ...clubSettings.address,
+                          [field]: e.target.value
+                        }
+                      })}
+                      placeholder={`Enter ${label.toLowerCase()}`}
+                    />
+                  ) : (
+                    <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                      {clubSettings.address[field as keyof typeof clubSettings.address] || '-'}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -401,9 +448,10 @@ export default function SettingsPage() {
             <div>
               <Label htmlFor="phone">Phone Number</Label>
               <div className="flex">
-                <div className="flex items-center px-3 bg-gray-50 border border-r-0 rounded-l-md text-sm text-muted-foreground">
-                  {getCountryPhonePrefix()}
-                </div>
+              <div className="flex items-center px-3 bg-gray-50 border border-r-0 rounded-l-md text-sm text-muted-foreground">
+                {getCountryPhonePrefix()}
+              </div>
+              {clubEditMode ? (
                 <Input 
                   id="phone"
                   type="tel"
@@ -412,6 +460,11 @@ export default function SettingsPage() {
                   className="rounded-l-none"
                   placeholder="123-456-7890"
                 />
+              ) : (
+                <div className="h-10 px-3 py-2 border border-l-0 rounded-r-md bg-gray-50 flex items-center text-sm flex-1">
+                  {clubSettings.phone || 'Not provided'}
+                </div>
+              )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Format: {formatPhoneNumber('123-456-7890', clubSettings.country)}
@@ -419,28 +472,75 @@ export default function SettingsPage() {
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email"
-                type="email"
-                value={clubSettings.email}
-                onChange={(e) => updateClubSettings({email: e.target.value})}
-                placeholder="info@yourclub.com"
-              />
+              {clubEditMode ? (
+                <Input 
+                  id="email"
+                  type="email"
+                  value={clubSettings.email}
+                  onChange={(e) => updateClubSettings({email: e.target.value})}
+                  placeholder="info@yourclub.com"
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {clubSettings.email || 'Not provided'}
+                </div>
+              )}
             </div>
             <div>
               <Label htmlFor="website">Website</Label>
-              <Input 
-                id="website"
-                type="url"
-                value={clubSettings.website}
-                onChange={(e) => updateClubSettings({website: e.target.value})}
-                placeholder="https://yourclub.com"
-              />
+              {clubEditMode ? (
+                <Input 
+                  id="website"
+                  type="url"
+                  value={clubSettings.website}
+                  onChange={(e) => updateClubSettings({website: e.target.value})}
+                  placeholder="https://yourclub.com"
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {clubSettings.website ? (
+                    <a href={clubSettings.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+                      {clubSettings.website}
+                    </a>
+                  ) : (
+                    'Not provided'
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Timezone and Localization */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {clubEditMode && (
+            <div className="flex justify-end">
+              <Button 
+                onClick={() => {
+                  handleSave('club')
+                  setClubEditMode(false)
+                }}
+                disabled={saveStatus === 'saving'}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Localization Settings - Always Editable */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Localization Settings
+          </CardTitle>
+          <CardDescription>
+            Configure timezone, currency, and date/time formats
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="timezone">Timezone</Label>
               <select 
@@ -455,6 +555,31 @@ export default function SettingsPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <Label htmlFor="currency">Currency</Label>
+              <select 
+                id="currency"
+                value={clubSettings.currency}
+                onChange={(e) => updateClubSettings({currency: e.target.value})}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="USD">USD ($)</option>
+                <option value="CAD">CAD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="AUD">AUD ($)</option>
+                <option value="NZD">NZD ($)</option>
+                <option value="JPY">JPY (¥)</option>
+                <option value="SGD">SGD ($)</option>
+                <option value="INR">INR (₹)</option>
+                <option value="ZAR">ZAR (R)</option>
+                <option value="BRL">BRL (R$)</option>
+                <option value="MXN">MXN ($)</option>
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Used throughout the platform for pricing
+              </p>
             </div>
             <div>
               <Label htmlFor="dateFormat">Date Format</Label>
@@ -483,20 +608,21 @@ export default function SettingsPage() {
               </select>
             </div>
           </div>
-
-          <div className="flex justify-end">
+          
+          <div className="flex justify-end mt-6">
             <Button 
-              onClick={() => handleSave('club')}
+              onClick={() => handleSave('localization')}
               disabled={saveStatus === 'saving'}
               className="flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
-              {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+              Save Localization
             </Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Operating Hours - Always Editable */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -518,6 +644,15 @@ export default function SettingsPage() {
                     value={hours.open}
                     className="w-32"
                     disabled={hours.closed}
+                    onChange={(e) => updateClubSettings({
+                      operatingHours: {
+                        ...clubSettings.operatingHours,
+                        [day]: {
+                          ...hours,
+                          open: e.target.value
+                        }
+                      }
+                    })}
                   />
                   <span>to</span>
                   <Input 
@@ -525,11 +660,29 @@ export default function SettingsPage() {
                     value={hours.close}
                     className="w-32"
                     disabled={hours.closed}
+                    onChange={(e) => updateClubSettings({
+                      operatingHours: {
+                        ...clubSettings.operatingHours,
+                        [day]: {
+                          ...hours,
+                          close: e.target.value
+                        }
+                      }
+                    })}
                   />
                   <label className="flex items-center gap-2">
                     <input 
                       type="checkbox" 
                       checked={hours.closed}
+                      onChange={(e) => updateClubSettings({
+                        operatingHours: {
+                          ...clubSettings.operatingHours,
+                          [day]: {
+                            ...hours,
+                            closed: e.target.checked
+                          }
+                        }
+                      })}
                       className="rounded"
                     />
                     Closed
@@ -538,6 +691,7 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+          
           <div className="flex justify-end mt-6">
             <Button 
               onClick={() => handleSave('hours')}
@@ -739,9 +893,29 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            System Configuration
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              System Configuration
+            </div>
+            {!systemEditMode ? (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setSystemEditMode(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setSystemEditMode(false)}
+              >
+                Cancel
+              </Button>
+            )}
           </CardTitle>
           <CardDescription>
             Configure booking rules and system behavior
@@ -751,81 +925,122 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor="bookingAdvanceDays">Booking Advance Days</Label>
-              <Input 
-                id="bookingAdvanceDays"
-                type="number"
-                value={systemSettings.bookingAdvanceDays}
-                onChange={(e) => setSystemSettings({...systemSettings, bookingAdvanceDays: parseInt(e.target.value)})}
-              />
+              {systemEditMode ? (
+                <Input 
+                  id="bookingAdvanceDays"
+                  type="number"
+                  value={systemSettings.bookingAdvanceDays}
+                  onChange={(e) => setSystemSettings({...systemSettings, bookingAdvanceDays: parseInt(e.target.value)})}
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {systemSettings.bookingAdvanceDays} days
+                </div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">How many days in advance can members book courts</p>
             </div>
 
             <div>
               <Label htmlFor="maxBookingsPerUser">Max Bookings Per User</Label>
-              <Input 
-                id="maxBookingsPerUser"
-                type="number"
-                value={systemSettings.maxBookingsPerUser}
-                onChange={(e) => setSystemSettings({...systemSettings, maxBookingsPerUser: parseInt(e.target.value)})}
-              />
+              {systemEditMode ? (
+                <Input 
+                  id="maxBookingsPerUser"
+                  type="number"
+                  value={systemSettings.maxBookingsPerUser}
+                  onChange={(e) => setSystemSettings({...systemSettings, maxBookingsPerUser: parseInt(e.target.value)})}
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {systemSettings.maxBookingsPerUser} bookings
+                </div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">Maximum active bookings per member</p>
             </div>
 
             <div>
               <Label htmlFor="cancellationHours">Cancellation Notice (Hours)</Label>
-              <Input 
-                id="cancellationHours"
-                type="number"
-                value={systemSettings.cancellationHours}
-                onChange={(e) => setSystemSettings({...systemSettings, cancellationHours: parseInt(e.target.value)})}
-              />
+              {systemEditMode ? (
+                <Input 
+                  id="cancellationHours"
+                  type="number"
+                  value={systemSettings.cancellationHours}
+                  onChange={(e) => setSystemSettings({...systemSettings, cancellationHours: parseInt(e.target.value)})}
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {systemSettings.cancellationHours} hours
+                </div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">Minimum hours notice required for cancellation</p>
             </div>
 
             <div>
               <Label htmlFor="matchDurationMinutes">Default Match Duration (Minutes)</Label>
-              <Input 
-                id="matchDurationMinutes"
-                type="number"
-                value={systemSettings.matchDurationMinutes}
-                onChange={(e) => setSystemSettings({...systemSettings, matchDurationMinutes: parseInt(e.target.value)})}
-              />
+              {systemEditMode ? (
+                <Input 
+                  id="matchDurationMinutes"
+                  type="number"
+                  value={systemSettings.matchDurationMinutes}
+                  onChange={(e) => setSystemSettings({...systemSettings, matchDurationMinutes: parseInt(e.target.value)})}
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {systemSettings.matchDurationMinutes} minutes
+                </div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">Default duration for match bookings</p>
             </div>
 
             <div>
               <Label htmlFor="courtMaintenanceBuffer">Maintenance Buffer (Minutes)</Label>
-              <Input 
-                id="courtMaintenanceBuffer"
-                type="number"
-                value={systemSettings.courtMaintenanceBuffer}
-                onChange={(e) => setSystemSettings({...systemSettings, courtMaintenanceBuffer: parseInt(e.target.value)})}
-              />
+              {systemEditMode ? (
+                <Input 
+                  id="courtMaintenanceBuffer"
+                  type="number"
+                  value={systemSettings.courtMaintenanceBuffer}
+                  onChange={(e) => setSystemSettings({...systemSettings, courtMaintenanceBuffer: parseInt(e.target.value)})}
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {systemSettings.courtMaintenanceBuffer} minutes
+                </div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">Time buffer between bookings for court maintenance</p>
             </div>
 
             <div>
               <Label htmlFor="autoReleaseMinutes">Auto-release Time (Minutes)</Label>
-              <Input 
-                id="autoReleaseMinutes"
-                type="number"
-                value={systemSettings.autoReleaseMinutes}
-                onChange={(e) => setSystemSettings({...systemSettings, autoReleaseMinutes: parseInt(e.target.value)})}
-              />
+              {systemEditMode ? (
+                <Input 
+                  id="autoReleaseMinutes"
+                  type="number"
+                  value={systemSettings.autoReleaseMinutes}
+                  onChange={(e) => setSystemSettings({...systemSettings, autoReleaseMinutes: parseInt(e.target.value)})}
+                />
+              ) : (
+                <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center text-sm">
+                  {systemSettings.autoReleaseMinutes} minutes
+                </div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">Auto-release unclaimed reservations after this time</p>
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <Button 
-              onClick={() => handleSave('system')}
-              disabled={saveStatus === 'saving'}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              Save Settings
-            </Button>
-          </div>
+          {systemEditMode && (
+            <div className="flex justify-end">
+              <Button 
+                onClick={() => {
+                  handleSave('system')
+                  setSystemEditMode(false)
+                }}
+                disabled={saveStatus === 'saving'}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -841,27 +1056,49 @@ export default function SettingsPage() {
               <Users className="h-5 w-5" />
               Membership Types
             </div>
-            <Button 
-              size="sm" 
-              onClick={() => {
-                const newMembership = {
-                  id: Date.now().toString(),
-                  name: 'New Membership',
-                  description: 'New membership type',
-                  monthlyFee: 50,
-                  initializationFee: 100,
-                  courtBookingRate: 25,
-                  features: ['Court booking'],
-                  maxAdvanceBookingDays: 14,
-                  maxActiveBookings: 3,
-                  isActive: true
-                }
-                setMembershipTypes([...membershipTypes, newMembership])
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Membership
-            </Button>
+            <div className="flex items-center gap-2">
+              {!membershipEditMode ? (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setMembershipEditMode(true)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setMembershipEditMode(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      const newMembership = {
+                        id: Date.now().toString(),
+                        name: 'New Membership',
+                        description: 'New membership type',
+                        monthlyFee: 50,
+                        initializationFee: 100,
+                        courtBookingRate: 25,
+                        features: ['Court booking'],
+                        maxAdvanceBookingDays: 14,
+                        maxActiveBookings: 3,
+                        isActive: true
+                      }
+                      setMembershipTypes([...membershipTypes, newMembership])
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Membership
+                  </Button>
+                </>
+              )}
+            </div>
           </CardTitle>
           <CardDescription>
             Configure membership types, descriptions, fees, and booking privileges. Event-only members pay per event at rates set in each event.
@@ -875,7 +1112,7 @@ export default function SettingsPage() {
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Fee</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Init Fee</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Court Rate ($/hr)</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Court Rate ({getCurrencySymbol()}/hr)</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking Days</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Active</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -886,117 +1123,152 @@ export default function SettingsPage() {
                 {membershipTypes.map((membership, index) => (
                   <tr key={membership.id} className="hover:bg-gray-50">
                     <td className="px-3 py-4">
-                      <div className="space-y-2">
+                      {membershipEditMode ? (
+                        <div className="space-y-2">
+                          <Input 
+                            value={membership.name}
+                            onChange={(e) => {
+                              const updated = [...membershipTypes]
+                              updated[index].name = e.target.value
+                              setMembershipTypes(updated)
+                            }}
+                            className="font-medium text-sm"
+                            placeholder="Membership name"
+                          />
+                          <Input 
+                            value={membership.description}
+                            onChange={(e) => {
+                              const updated = [...membershipTypes]
+                              updated[index].description = e.target.value
+                              setMembershipTypes(updated)
+                            }}
+                            className="text-xs text-gray-600"
+                            placeholder="Description"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="font-medium text-sm">{membership.name}</div>
+                          <div className="text-xs text-gray-600">{membership.description}</div>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-4">
+                      {membershipEditMode ? (
                         <Input 
-                          value={membership.name}
+                          type="number"
+                          value={membership.monthlyFee}
                           onChange={(e) => {
                             const updated = [...membershipTypes]
-                            updated[index].name = e.target.value
+                            updated[index].monthlyFee = parseFloat(e.target.value) || 0
                             setMembershipTypes(updated)
                           }}
-                          className="font-medium text-sm"
-                          placeholder="Membership name"
+                          className="w-20 text-sm"
                         />
+                      ) : (
+                        <span className="text-sm">{getCurrencySymbol()}{membership.monthlyFee}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-4">
+                      {membershipEditMode ? (
                         <Input 
-                          value={membership.description}
+                          type="number"
+                          value={membership.initializationFee}
                           onChange={(e) => {
                             const updated = [...membershipTypes]
-                            updated[index].description = e.target.value
+                            updated[index].initializationFee = parseFloat(e.target.value) || 0
                             setMembershipTypes(updated)
                           }}
-                          className="text-xs text-gray-600"
-                          placeholder="Description"
+                          className="w-20 text-sm"
                         />
-                      </div>
+                      ) : (
+                        <span className="text-sm">{getCurrencySymbol()}{membership.initializationFee}</span>
+                      )}
                     </td>
                     <td className="px-3 py-4">
-                      <Input 
-                        type="number"
-                        value={membership.monthlyFee}
-                        onChange={(e) => {
-                          const updated = [...membershipTypes]
-                          updated[index].monthlyFee = parseFloat(e.target.value) || 0
-                          setMembershipTypes(updated)
-                        }}
-                        className="w-20 text-sm"
-                      />
-                    </td>
-                    <td className="px-3 py-4">
-                      <Input 
-                        type="number"
-                        value={membership.initializationFee}
-                        onChange={(e) => {
-                          const updated = [...membershipTypes]
-                          updated[index].initializationFee = parseFloat(e.target.value) || 0
-                          setMembershipTypes(updated)
-                        }}
-                        className="w-20 text-sm"
-                      />
-                    </td>
-                    <td className="px-3 py-4">
-                      <Input 
-                        type="number"
-                        value={membership.courtBookingRate}
-                        onChange={(e) => {
-                          const updated = [...membershipTypes]
-                          updated[index].courtBookingRate = parseFloat(e.target.value) || 0
-                          setMembershipTypes(updated)
-                        }}
-                        className="w-20 text-sm"
-                      />
-                    </td>
-                    <td className="px-3 py-4">
-                      <Input 
-                        type="number"
-                        value={membership.maxAdvanceBookingDays}
-                        onChange={(e) => {
-                          const updated = [...membershipTypes]
-                          updated[index].maxAdvanceBookingDays = parseInt(e.target.value) || 0
-                          setMembershipTypes(updated)
-                        }}
-                        className="w-16 text-sm"
-                      />
-                    </td>
-                    <td className="px-3 py-4">
-                      <Input 
-                        type="number"
-                        value={membership.maxActiveBookings}
-                        onChange={(e) => {
-                          const updated = [...membershipTypes]
-                          updated[index].maxActiveBookings = parseInt(e.target.value) || 0
-                          setMembershipTypes(updated)
-                        }}
-                        className="w-16 text-sm"
-                      />
-                    </td>
-                    <td className="px-3 py-4">
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="checkbox" 
-                          checked={membership.isActive}
+                      {membershipEditMode ? (
+                        <Input 
+                          type="number"
+                          value={membership.courtBookingRate}
                           onChange={(e) => {
                             const updated = [...membershipTypes]
-                            updated[index].isActive = e.target.checked
+                            updated[index].courtBookingRate = parseFloat(e.target.value) || 0
                             setMembershipTypes(updated)
                           }}
-                          className="rounded"
+                          className="w-20 text-sm"
                         />
-                        <span className="text-sm">{membership.isActive ? 'Active' : 'Inactive'}</span>
-                      </div>
+                      ) : (
+                        <span className="text-sm">{membership.courtBookingRate > 0 ? `${getCurrencySymbol()}${membership.courtBookingRate}/hr` : 'Event pricing'}</span>
+                      )}
                     </td>
                     <td className="px-3 py-4">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          if (confirm("Delete this membership type?")) {
-                            setMembershipTypes(membershipTypes.filter(m => m.id !== membership.id))
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {membershipEditMode ? (
+                        <Input 
+                          type="number"
+                          value={membership.maxAdvanceBookingDays}
+                          onChange={(e) => {
+                            const updated = [...membershipTypes]
+                            updated[index].maxAdvanceBookingDays = parseInt(e.target.value) || 0
+                            setMembershipTypes(updated)
+                          }}
+                          className="w-16 text-sm"
+                        />
+                      ) : (
+                        <span className="text-sm">{membership.maxAdvanceBookingDays > 0 ? `${membership.maxAdvanceBookingDays} days` : 'Event only'}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-4">
+                      {membershipEditMode ? (
+                        <Input 
+                          type="number"
+                          value={membership.maxActiveBookings}
+                          onChange={(e) => {
+                            const updated = [...membershipTypes]
+                            updated[index].maxActiveBookings = parseInt(e.target.value) || 0
+                            setMembershipTypes(updated)
+                          }}
+                          className="w-16 text-sm"
+                        />
+                      ) : (
+                        <span className="text-sm">{membership.maxActiveBookings > 0 ? membership.maxActiveBookings : 'No limit'}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-4">
+                      {membershipEditMode ? (
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="checkbox" 
+                            checked={membership.isActive}
+                            onChange={(e) => {
+                              const updated = [...membershipTypes]
+                              updated[index].isActive = e.target.checked
+                              setMembershipTypes(updated)
+                            }}
+                            className="rounded"
+                          />
+                          <span className="text-sm">{membership.isActive ? 'Active' : 'Inactive'}</span>
+                        </div>
+                      ) : (
+                        <Badge variant={membership.isActive ? 'default' : 'secondary'} className={membership.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          {membership.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-3 py-4">
+                      {membershipEditMode && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (confirm("Delete this membership type?")) {
+                              setMembershipTypes(membershipTypes.filter(m => m.id !== membership.id))
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1014,7 +1286,7 @@ export default function SettingsPage() {
             Pricing Settings
           </CardTitle>
           <CardDescription>
-            Set rates for courts, tournaments, lessons and fees
+            Set rates for courts, tournaments, lessons and fees. Currency is configured in Club Info settings.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1044,7 +1316,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()}/hour</td>
                 </tr>
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3"></td>
@@ -1060,7 +1332,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()}/hour</td>
                 </tr>
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3"></td>
@@ -1076,7 +1348,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()}/hour</td>
                 </tr>
                 
                 {/* Tournament Fees */}
@@ -1094,7 +1366,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$ entry</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()} entry</td>
                 </tr>
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3"></td>
@@ -1110,7 +1382,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$ entry</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()} entry</td>
                 </tr>
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3"></td>
@@ -1126,7 +1398,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$ entry</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()} entry</td>
                 </tr>
                 
                 {/* Lesson Rates */}
@@ -1144,7 +1416,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()}/hour</td>
                 </tr>
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3"></td>
@@ -1160,7 +1432,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$/person/hour</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()}/person/hour</td>
                 </tr>
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3"></td>
@@ -1176,7 +1448,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$/person/session</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()}/person/session</td>
                 </tr>
                 
                 {/* Guest & Late Fees */}
@@ -1194,7 +1466,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$ per day</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()} per day</td>
                 </tr>
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3"></td>
@@ -1210,7 +1482,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$/hour</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()}/hour</td>
                 </tr>
                 
                 <tr className="hover:bg-gray-50">
@@ -1227,7 +1499,7 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$ fee</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()} fee</td>
                 </tr>
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3"></td>
@@ -1243,30 +1515,12 @@ export default function SettingsPage() {
                       className="w-20 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">$ fee</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getCurrencySymbol()} fee</td>
                 </tr>
                 
                 {/* General Settings */}
                 <tr className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-sm text-gray-900">General</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">Currency</td>
-                  <td className="px-4 py-3">
-                    <select 
-                      value={pricingSettings.currency}
-                      onChange={(e) => setPricingSettings({ ...pricingSettings, currency: e.target.value })}
-                      className="w-20 h-8 text-sm border rounded px-2"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="CAD">CAD</option>
-                      <option value="EUR">EUR</option>
-                      <option value="GBP">GBP</option>
-                      <option value="AUD">AUD</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">Code</td>
-                </tr>
-                <tr className="hover:bg-gray-50">
-                  <td className="px-4 py-3"></td>
                   <td className="px-4 py-3 text-sm text-gray-600">Tax Rate</td>
                   <td className="px-4 py-3">
                     <Input 
@@ -1285,17 +1539,22 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex justify-end gap-3">
-        <Button 
-          onClick={() => handleSave('membership')}
-          disabled={saveStatus === 'saving'}
-          className="flex items-center gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {saveStatus === 'saving' ? 'Saving...' : 'Save Membership & Pricing'}
-        </Button>
-      </div>
+      {/* Save Button - only show in edit mode */}
+      {membershipEditMode && (
+        <div className="flex justify-end gap-3">
+          <Button 
+            onClick={() => {
+              handleSave('membership')
+              setMembershipEditMode(false)
+            }}
+            disabled={saveStatus === 'saving'}
+            className="flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 
@@ -1559,24 +1818,6 @@ export default function SettingsPage() {
           <div>
             <h4 className="font-medium mb-4">General Settings</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="currency">Currency</Label>
-                <select 
-                  id="currency"
-                  value={pricingSettings.currency}
-                  onChange={(e) => setPricingSettings({
-                    ...pricingSettings,
-                    currency: e.target.value
-                  })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="CAD">CAD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="AUD">AUD ($)</option>
-                </select>
-              </div>
               <div>
                 <Label htmlFor="taxRate">Tax Rate (%)</Label>
                 <Input 

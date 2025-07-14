@@ -7,13 +7,7 @@
     "dev:turbo": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "cypress:open": "cypress open",
-    "cypress:run": "cypress run",
-    "test:e2e": "start-server-and-test dev 3000 cypress:run"
+    "lint": "next lint"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -45,22 +39,14 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
-    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",
-    "cypress": "^14.5.1",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
-    "jest": "^30.0.4",
-    "jest-environment-jsdom": "^30.0.4",
     "postcss": "^8.5.6",
-    "start-server-and-test": "^2.0.12",
     "tailwindcss": "^3.4.17",
-    "ts-jest": "^29.4.0",
     "typescript": "^5"
   }
 }

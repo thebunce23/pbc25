@@ -1,89 +1,14 @@
 import { createClient } from '../supabase'
-
-export interface Match {
-  id: string
-  title: string
-  match_type: 'Singles' | 'Doubles' | 'Mixed Doubles' | 'Tournament'
-  skill_level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Mixed'
-  court_id?: string
-  date: string
-  time: string
-  duration_minutes: number
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
-  max_players: number
-  current_players: number
-  description?: string
-  notes?: string
-  score: any
-  created_by?: string
-  created_at: string
-  updated_at: string
-  // Joined data
-  court?: Court
-  participants?: MatchParticipant[]
-}
-
-export interface MatchParticipant {
-  id: string
-  match_id: string
-  player_id: string
-  team: 'A' | 'B'
-  status: 'registered' | 'confirmed' | 'cancelled' | 'no_show'
-  joined_at: string
-  player?: Player
-}
-
-export interface Court {
-  id: string
-  name: string
-  type: string
-  status: string
-}
-
-export interface Player {
-  id: string
-  first_name: string
-  last_name: string
-  skill_level: string
-  email: string
-}
-
-export interface CreateMatchData {
-  title: string
-  match_type?: 'Singles' | 'Doubles' | 'Mixed Doubles' | 'Tournament'
-  skill_level?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Mixed'
-  court_id?: string
-  date: string
-  time: string
-  duration_minutes?: number
-  max_players?: number
-  description?: string
-  notes?: string
-}
-
-export interface UpdateMatchData {
-  title?: string
-  match_type?: 'Singles' | 'Doubles' | 'Mixed Doubles' | 'Tournament'
-  skill_level?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Mixed'
-  court_id?: string
-  date?: string
-  time?: string
-  duration_minutes?: number
-  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
-  max_players?: number
-  description?: string
-  notes?: string
-  score?: any
-}
-
-export interface MatchFilters {
-  status?: string
-  court_id?: string
-  player_id?: string
-  date?: string
-  skill_level?: string
-  match_type?: string
-}
+import { 
+  Match, 
+  MatchParticipant, 
+  Court, 
+  Player, 
+  CreateMatchData, 
+  UpdateMatchData, 
+  MatchFilters, 
+  TeamId 
+} from '@/types/match'
 
 export class MatchService {
   private supabase = createClient()
@@ -186,7 +111,7 @@ export class MatchService {
       description: matchData.description,
       notes: matchData.notes,
       status: 'scheduled',
-      current_players: 0
+      current_players: matchData.participants?.length || 0
     }
 
     const { data, error } = await this.supabase
@@ -202,11 +127,42 @@ export class MatchService {
       throw error
     }
 
-    return {
+    const match = {
       ...data,
       participants: [],
       current_players: 0
     }
+
+    // Add participants if provided
+    if (matchData.participants && matchData.participants.length > 0) {
+      const participantInserts = matchData.participants.map(participant => ({
+        match_id: data.id,
+        player_id: participant.player_id,
+        team: participant.team,
+        status: 'registered' as const
+      }))
+
+      const { data: participantsData, error: participantsError } = await this.supabase
+        .from('match_participants')
+        .insert(participantInserts)
+        .select(`
+          id,
+          team,
+          status,
+          player:players(id, first_name, last_name, skill_level, email)
+        `)
+
+      if (participantsError) {
+        // If participants fail to insert, we should probably delete the match
+        // but for now we'll just throw the error
+        throw participantsError
+      }
+
+      match.participants = participantsData || []
+      match.current_players = participantsData?.length || 0
+    }
+
+    return match
   }
 
   // Update a match
@@ -266,7 +222,7 @@ export class MatchService {
   }
 
   // Add a player to a match
-  async addPlayerToMatch(matchId: string, playerId: string, team: 'A' | 'B'): Promise<MatchParticipant> {
+  async addPlayerToMatch(matchId: string, playerId: string, team: TeamId): Promise<MatchParticipant> {
     // First check if match is full
     const match = await this.getMatch(matchId)
     if (!match) {

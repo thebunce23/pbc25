@@ -85,7 +85,7 @@ const ClubEventForm: React.FC<ClubEventFormProps> = ({
 }) => {
   const [selectedCourts, setSelectedCourts] = useState<string[]>([])
   const [isRecurring, setIsRecurring] = useState(false)
-  const [availableCourts, setAvailableCourts] = useState(courtService.getBookableCourts())
+  const [availableCourts, setAvailableCourts] = useState<any[]>([])
 
   const {
     register,
@@ -110,8 +110,18 @@ const ClubEventForm: React.FC<ClubEventFormProps> = ({
   const watchedIsRecurring = watch('isRecurring')
 
   React.useEffect(() => {
-    // Load courts from service
-    setAvailableCourts(courtService.getBookableCourts())
+    // Load courts from service asynchronously
+    const loadCourts = async () => {
+      try {
+        const courts = await courtService.getBookableCourts()
+        setAvailableCourts(courts)
+      } catch (error) {
+        console.error('Error loading courts:', error)
+        setAvailableCourts([])
+      }
+    }
+    
+    loadCourts()
     
     if (editEvent) {
       // Populate form with edit data
@@ -189,12 +199,12 @@ const ClubEventForm: React.FC<ClubEventFormProps> = ({
   })
 
   const getPrimaryCourt = () => {
-    if (selectedCourts.length === 0) return null
+    if (selectedCourts.length === 0 || !Array.isArray(availableCourts)) return null
     return availableCourts.find(court => court.id === selectedCourts[0])
   }
 
   const getAdditionalCourts = () => {
-    if (selectedCourts.length <= 1) return []
+    if (selectedCourts.length <= 1 || !Array.isArray(availableCourts)) return []
     return selectedCourts.slice(1).map(courtId => 
       availableCourts.find(court => court.id === courtId)
     ).filter(Boolean)
@@ -268,7 +278,7 @@ const ClubEventForm: React.FC<ClubEventFormProps> = ({
                   <SelectValue placeholder="Select primary court" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableCourts.map((court) => (
+                  {Array.isArray(availableCourts) && availableCourts.map((court) => (
                     <SelectItem key={court.id} value={court.id}>
                       <div className="flex items-center justify-between w-full">
                         <span>{court.name}</span>

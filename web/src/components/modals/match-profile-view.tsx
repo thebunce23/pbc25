@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 import { useClubSettings } from '@/contexts/club-settings-context'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,17 +29,9 @@ import {
   Timer
 } from 'lucide-react'
 
-interface Player {
-  id: string
-  firstName: string
-  lastName: string
-  skillLevel: number
-}
-
-interface Participant {
-  player: Player
-  team: 'A' | 'B'
-}
+import { Player, Participant, TeamId, DEFAULT_TEAM_A, DEFAULT_TEAM_B } from '@/types/match'
+import { getTeamColors } from '@/lib/utils/match-utils'
+import AddPlayerToMatchForm from '@/components/forms/add-player-to-match-form'
 
 interface Match {
   id: string
@@ -51,6 +45,7 @@ interface Match {
   winner?: string | null
   duration_minutes?: number | null
   notes?: string | null
+  max_players?: number
 }
 
 interface MatchProfileViewProps {
@@ -76,16 +71,34 @@ const statusLabels = {
 
 export default function MatchProfileView({ open, onOpenChange, match, onEdit }: MatchProfileViewProps) {
   const { formatDate, formatTime } = useClubSettings()
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false)
 
   if (!match) return null
-
-  // Extract players from participants
-  const teamAPlayer = match.participants?.find(p => p.team === 'A')?.player
-  const teamBPlayer = match.participants?.find(p => p.team === 'B')?.player
-
-  if (!teamAPlayer || !teamBPlayer) {
-    return null // Can't display match without both players
+  
+  const handlePlayerAdded = () => {
+    // Refresh the match data - in a real app, this would trigger a data reload
+    // For now, we'll just close the form
+    setAddPlayerOpen(false)
   }
+
+  // Extract players from participants dynamically
+  const teamGroups = new Map();
+  match.participants?.forEach(p => {
+    if (!teamGroups.has(p.team)) {
+      teamGroups.set(p.team, []);
+    }
+    teamGroups.get(p.team).push(p.player);
+  });
+  const teamPlayerArrays = Array.from(teamGroups.values());
+  const [teamAPlayers = [], teamBPlayers = []] = teamPlayerArrays;
+  const teamIdsList = Array.from(teamGroups.keys());
+  const [teamAId, teamBId] = teamIdsList;
+
+  if (teamAPlayers.length === 0 || teamBPlayers.length === 0) {
+    return null // Can't display match without both teams
+  }
+
+  const isDoublesMatch = teamAPlayers.length > 1 || teamBPlayers.length > 1
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -98,31 +111,55 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
   }
 
   const getWinner = () => {
-    if (match.status !== 'completed' || !match.score) return null
+    if (match.status !== 'completed') return null
+    
+    // First check if match.winner is explicitly set to team ID
+    if (match.winner === teamAId) {
+      return {
+        winnerTeam: teamAId,
+        loserTeam: teamBId,
+        winnerPlayers: teamAPlayers,
+        loserPlayers: teamBPlayers
+      }
+    } else if (match.winner === teamBId) {
+      return {
+        winnerTeam: teamBId,
+        loserTeam: teamAId,
+        winnerPlayers: teamBPlayers,
+        loserPlayers: teamAPlayers
+      }
+    }
+    
+    // If no explicit winner, try to determine from score
+    if (!match.score) return null
     
     const scoreStr = typeof match.score === 'object' ? JSON.stringify(match.score) : match.score
     if (!scoreStr) return null
     
     // Simple logic to determine winner from score
     const games = scoreStr.split(', ')
-    let player1Wins = 0
-    let player2Wins = 0
+    let teamAWins = 0
+    let teamBWins = 0
     
     games.forEach(game => {
-      const [p1Score, p2Score] = game.split('-').map(Number)
-      if (p1Score > p2Score) player1Wins++
-      else player2Wins++
+      const [teamAScore, teamBScore] = game.split('-').map(Number)
+      if (teamAScore > teamBScore) teamAWins++
+      else teamBWins++
     })
     
-    if (player1Wins > player2Wins) {
+    if (teamAWins > teamBWins) {
       return {
-        winner: `${teamAPlayer.firstName} ${teamAPlayer.lastName}`,
-        loser: `${teamBPlayer.firstName} ${teamBPlayer.lastName}`
+        winnerTeam: teamAId,
+        loserTeam: teamBId,
+        winnerPlayers: teamAPlayers,
+        loserPlayers: teamBPlayers
       }
-    } else if (player2Wins > player1Wins) {
+    } else if (teamBWins > teamAWins) {
       return {
-        winner: `${teamBPlayer.firstName} ${teamBPlayer.lastName}`,
-        loser: `${teamAPlayer.firstName} ${teamAPlayer.lastName}`
+        winnerTeam: teamBId,
+        loserTeam: teamAId,
+        winnerPlayers: teamBPlayers,
+        loserPlayers: teamAPlayers
       }
     }
     return null
@@ -135,7 +172,10 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
   }
 
   const getSkillDifference = () => {
-    return Math.abs(teamAPlayer.skillLevel - teamBPlayer.skillLevel)
+    // Calculate average skill level for each team
+    const teamAAvg = teamAPlayers.reduce((sum, player) => sum + player.skillLevel, 0) / teamAPlayers.length
+    const teamBAvg = teamBPlayers.reduce((sum, player) => sum + player.skillLevel, 0) / teamBPlayers.length
+    return Math.abs(teamAAvg - teamBAvg)
   }
 
   return (
@@ -148,7 +188,11 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                   {getStatusIcon(match.status)}
                 </div>
-                {teamAPlayer.firstName} {teamAPlayer.lastName} vs {teamBPlayer.firstName} {teamBPlayer.lastName}
+                {isDoublesMatch ? (
+                  `Team A vs Team B - ${match.match_type || 'Doubles'}`
+                ) : (
+                  `${teamAPlayers[0].firstName} ${teamAPlayers[0].lastName} vs ${teamBPlayers[0].firstName} ${teamBPlayers[0].lastName}`
+                )}
               </DialogTitle>
               <DialogDescription>
                 {formatDateTime(match.date, match.time)}
@@ -179,7 +223,7 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
             {winner && (
               <Badge variant="outline" className="bg-yellow-50 text-yellow-700 flex items-center gap-1">
                 <Flag className="h-3 w-3" />
-                Winner: {winner.winner}
+                Winner: Team {winner.winnerTeam}
               </Badge>
             )}
           </div>
@@ -230,52 +274,89 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
             </CardContent>
           </Card>
 
-          {/* Players */}
+        {/* Add Player Form */}
+        <AddPlayerToMatchForm
+          open={addPlayerOpen}
+          onOpenChange={setAddPlayerOpen}
+          onSuccess={handlePlayerAdded}
+          matchId={match.id}
+          currentParticipants={match.participants || []}
+          maxPlayers={match.max_players || 4}
+        />
+
+        {/* Players */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Players
+              <CardTitle className="text-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  {isDoublesMatch ? 'Teams' : 'Players'}
+                </div>
+                {match.status === 'scheduled' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAddPlayerOpen(true)}
+                  >
+                    Add Player
+                  </Button>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-6">
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-lg font-medium text-blue-600">
-                      {teamAPlayer.firstName.charAt(0)}{teamAPlayer.lastName.charAt(0)}
-                    </span>
+                {/* Team A */}
+                <div className="p-4 border rounded-lg">
+                  <div className="text-center mb-3">
+                    <div className={`w-12 h-12 ${getTeamColors(teamAId).background} rounded-full flex items-center justify-center mx-auto mb-2`}>
+                      <span className={`text-lg font-medium ${getTeamColors(teamAId).text}`}>{teamAId}</span>
+                    </div>
+                    <div className={`font-medium ${getTeamColors(teamAId).text}`}>Team {teamAId}</div>
                   </div>
-                  <div className="font-medium">{teamAPlayer.firstName} {teamAPlayer.lastName}</div>
-                  <div className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                    <Target className="h-3 w-3" />
-                    Skill: {teamAPlayer.skillLevel}
+                  <div className="space-y-2">
+                    {teamAPlayers.map((player, index) => (
+                      <div key={index} className={`text-center p-2 ${getTeamColors(teamAId).lightBackground} rounded`}>
+                        <div className="font-medium text-sm">{player.firstName} {player.lastName}</div>
+                        <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                          <Target className="h-3 w-3" />
+                          Skill: {player.skillLevel}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {winner && winner.winner === `${teamAPlayer.firstName} ${teamAPlayer.lastName}` && (
-                    <Badge className="mt-2 bg-yellow-100 text-yellow-800">Winner</Badge>
+                  {winner && winner.winnerTeam === teamAId && (
+                    <Badge className="mt-2 bg-yellow-100 text-yellow-800 w-full justify-center">Winner</Badge>
                   )}
                 </div>
                 
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-lg font-medium text-purple-600">
-                      {teamBPlayer.firstName.charAt(0)}{teamBPlayer.lastName.charAt(0)}
-                    </span>
+                {/* Team B */}
+                <div className="p-4 border rounded-lg">
+                  <div className="text-center mb-3">
+                    <div className={`w-12 h-12 ${getTeamColors(teamBId).background} rounded-full flex items-center justify-center mx-auto mb-2`}>
+                      <span className={`text-lg font-medium ${getTeamColors(teamBId).text}`}>{teamBId}</span>
+                    </div>
+                    <div className={`font-medium ${getTeamColors(teamBId).text}`}>Team {teamBId}</div>
                   </div>
-                  <div className="font-medium">{teamBPlayer.firstName} {teamBPlayer.lastName}</div>
-                  <div className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                    <Target className="h-3 w-3" />
-                    Skill: {teamBPlayer.skillLevel}
+                  <div className="space-y-2">
+                    {teamBPlayers.map((player, index) => (
+                      <div key={index} className={`text-center p-2 ${getTeamColors(teamBId).lightBackground} rounded`}>
+                        <div className="font-medium text-sm">{player.firstName} {player.lastName}</div>
+                        <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                          <Target className="h-3 w-3" />
+                          Skill: {player.skillLevel}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {winner && winner.winner === `${teamBPlayer.firstName} ${teamBPlayer.lastName}` && (
-                    <Badge className="mt-2 bg-yellow-100 text-yellow-800">Winner</Badge>
+                  {winner && winner.winnerTeam === teamBId && (
+                    <Badge className="mt-2 bg-yellow-100 text-yellow-800 w-full justify-center">Winner</Badge>
                   )}
                 </div>
               </div>
               
               <div className="text-center mt-4 p-3 bg-gray-50 rounded-lg">
-                <div className="text-sm text-muted-foreground">Skill Level Difference</div>
-                <div className="font-medium">{getSkillDifference()} points</div>
+                <div className="text-sm text-muted-foreground">Avg Skill Level Difference</div>
+                <div className="font-medium">{getSkillDifference().toFixed(1)} points</div>
               </div>
             </CardContent>
           </Card>
@@ -296,7 +377,7 @@ export default function MatchProfileView({ open, onOpenChange, match, onEdit }: 
                   </div>
                   {winner && (
                     <div className="text-lg text-green-600 font-medium">
-                      🏆 {winner.winner} wins!
+                      🏆 Team {winner.winnerTeam} wins!
                     </div>
                   )}
                 </div>

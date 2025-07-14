@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Calendar, MapPin, Users, Filter, Edit, Trash2, Play } from 'lucide-react'
+import Link from 'next/link'
 import DashboardLayout from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +16,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import EditMatchForm from '@/components/forms/edit-match-form'
 import MatchProfileView from '@/components/modals/match-profile-view'
-import GenerateMatchForm from '@/components/forms/generate-match-form'
 import { matchService, type Match, type MatchFilters } from '@/lib/services/match-service'
 
 
@@ -40,7 +40,6 @@ export default function MatchesPage() {
   const [selectedDate, setSelectedDate] = useState('')
   const [isEditMatchOpen, setIsEditMatchOpen] = useState(false)
   const [isProfileViewOpen, setIsProfileViewOpen] = useState(false)
-  const [isGenerateMatchOpen, setIsGenerateMatchOpen] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
 
   // Load matches on component mount
@@ -170,10 +169,6 @@ export default function MatchesPage() {
     setMatches(prev => prev.filter(match => match.id !== matchId))
   }
 
-  const handleGenerateMatch = (newMatch: Match) => {
-    setMatches(prev => [...prev, newMatch])
-    console.log('New match generated:', newMatch)
-  }
 
   return (
     <DashboardLayout title="Matches">
@@ -260,10 +255,12 @@ export default function MatchesPage() {
             </DropdownMenu>
           </div>
           
-          <Button onClick={() => setIsGenerateMatchOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Generate Match
-          </Button>
+          <Link href="/matches/generate">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Generate Matches
+            </Button>
+          </Link>
         </div>
 
         {/* Matches List */}
@@ -301,6 +298,25 @@ export default function MatchesPage() {
                         <h3 className="font-medium text-gray-900">
                           {match.title}
                         </h3>
+                        {match.participants.length >= 4 && (() => {
+                          // Filter players dynamically based on teams
+                          const teamGroups = new Map();
+                          match.participants.forEach(p => {
+                            if (p.player && p.team) {
+                              if (!teamGroups.has(p.team)) {
+                                teamGroups.set(p.team, []);
+                              }
+                              teamGroups.get(p.team).push(`${p.player.first_name} ${p.player.last_name}`);
+                            }
+                          });
+                          const teamValues = Array.from(teamGroups.values());
+                          const [teamA, teamB] = teamValues.map(players => players.join(', '));
+                          return teamA && teamB ? (
+                            <div className="text-xs text-gray-500">
+                              {teamA} vs {teamB}
+                            </div>
+                          ) : null
+                        })()}
                         <Badge variant="outline" className="text-xs">
                           {match.match_type}
                         </Badge>
@@ -427,12 +443,6 @@ export default function MatchesPage() {
           onEdit={handleEditFromProfile}
         />
         
-        {/* Generate Match Form */}
-        <GenerateMatchForm
-          open={isGenerateMatchOpen}
-          onOpenChange={setIsGenerateMatchOpen}
-          onSubmit={handleGenerateMatch}
-        />
       </div>
     </DashboardLayout>
   )

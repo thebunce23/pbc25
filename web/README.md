@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PBC25 Pickleball Club Platform
 
-## Getting Started
+A comprehensive multi-tenant pickleball club management platform built with Next.js, Supabase, and TypeScript.
 
-First, run the development server:
+## 🚀 Quick Start
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Prerequisites
+- Node.js 18+
+- npm, yarn, pnpm, or bun
+- Supabase account
+
+### Installation
+
+1. **Clone and install dependencies**
+   ```bash
+   git clone <repository-url>
+   cd pickleball-club-platform
+   npm install
+   ```
+
+2. **Set up environment variables**
+   ```bash
+   cp .env.example .env.local
+   ```
+   Fill in your Supabase credentials in `.env.local`
+
+3. **Run the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   # or
+   pnpm dev
+   # or
+   bun dev
+   ```
+
+4. **Open the application**
+   Visit [http://localhost:3000](http://localhost:3000)
+
+## 🏆 Team Management System
+
+### Auto-Expanding Team IDs
+
+The platform now supports **unlimited team expansion** beyond the traditional A vs B format:
+
+- **Team IDs**: A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
+- **Automatic Generation**: Teams are automatically assigned based on the number of teams needed
+- **Dynamic Scaling**: The system adapts to any number of teams for tournaments and events
+
+### Key Features
+
+#### 🎯 **Smart Team Assignment**
+- Automatically generates team IDs based on player count
+- Optimal team size calculation (3-6 players per team)
+- Balanced team creation with skill-level distribution
+
+#### 🎨 **Team Color System**
+- **Built-in Color Palette**: 8 predefined team colors (A-H)
+- **Extensible Design**: Easy to add more colors for teams beyond H
+- **Consistent Styling**: Each team has background, text, and border colors
+
+#### 🔧 **API Usage**
+
+```typescript
+// Generate team IDs for any number of teams
+import { getTeamIds } from '@/lib/utils/match-utils'
+
+// Create 5 teams: ['A', 'B', 'C', 'D', 'E']
+const teamIds = getTeamIds(5)
+
+// Get team colors
+import { getTeamColors } from '@/lib/utils/match-utils'
+const teamAColors = getTeamColors('A')
+// Returns: { background: 'bg-blue-100', text: 'text-blue-600', ... }
+
+// Calculate optimal team sizes (respects user's preferred team size)
+import { calculateOptimalTeamSizes } from '@/lib/utils/team-utils'
+const result = calculateOptimalTeamSizes(18, 4) // 18 players, prefer 4 per team
+// Returns: { teamCount: 4, playersPerTeam: [4, 4, 4, 6], isValid: true }
+
+// Build participants for matches (team-size aware)
+import { buildParticipantsForMatch } from '@/lib/utils/team-utils'
+const { participants } = buildParticipantsForMatch(players, 4) // Respects preferred team size
+
+// Generate round-robin matches with optimal team sizes
+import { generateRoundRobinWithPlayers } from '@/lib/utils/team-utils'
+const matches = generateRoundRobinWithPlayers(teamPlayerMap) // Uses pre-sized teams
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📚 Documentation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **[Feature Documentation](./README-FEATURES.md)** - Complete feature overview
+- **[Testing Guide](./docs/TESTING_GUIDE.md)** - Team system testing
+- **[Project Plan](./PROJECT_PLAN.md)** - Development roadmap
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🔗 Learn More
 
-## Learn More
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The platform is optimized for deployment on [Vercel](https://vercel.com) with Supabase as the backend.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See our [deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for details.

@@ -101,10 +101,13 @@ export default function GenerateMatchForm({ open, onOpenChange, onSubmit }: Gene
     try {
       setLoading(true)
       
-      // Add selected players to the match data
+      // Add selected players to the match data with team assignments
       const matchData = {
         ...formData,
-        participants: selectedPlayers.map(playerId => ({ player_id: playerId }))
+        participants: selectedPlayers.map((playerId, index) => ({
+          player_id: playerId,
+          team: index < Math.ceil(selectedPlayers.length / 2) ? 'A' as const : 'B' as const
+        }))
       }
       
       const newMatch = await matchService.createMatch(matchData)
