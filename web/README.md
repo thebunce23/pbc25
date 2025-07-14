@@ -85,7 +85,7 @@ const { participants } = buildParticipantsForMatch(players, 4) // Respects prefe
 
 // Generate round-robin matches with optimal team sizes
 import { generateRoundRobinWithPlayers } from '@/lib/utils/team-utils'
-const matches = generateRoundRobinWithPlayers(teamPlayerMap) // Uses pre-sized teams
+const matches = generateRoundRobinWithPlayers(teamPlayerMap, 4) // Uses preferredTeamSize
 ```
 
 ## 📚 Documentation

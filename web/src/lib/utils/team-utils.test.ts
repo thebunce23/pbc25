@@ -65,7 +65,7 @@ describe('generateRoundRobinWithPlayers', () => {
       { id: 'p12', first_name: 'Bella', last_name: 'B', skill_level: 'Advanced' }
     ])
 
-    const matches = generateRoundRobinWithPlayers(teamPlayerMap)
+    const matches = generateRoundRobinWithPlayers(teamPlayerMap, 4)
     expect(matches.length).toBe(1)
     expect(matches[0].participants.length).toBe(4)
   })
@@ -82,7 +82,7 @@ describe('generateRoundRobinWithPlayers', () => {
       { id: 'p4', first_name: 'Betty', last_name: 'B', skill_level: 'Advanced' }
     ])
 
-    const matches = generateRoundRobinWithPlayers(teamPlayerMap)
+    const matches = generateRoundRobinWithPlayers(teamPlayerMap, 2)
     // This function still generates matches if both teams have at least 2 players
     expect(matches.length).toBe(1)
     expect(matches[0].participants.length).toBe(4) // 2 players from each team
@@ -198,13 +198,6 @@ describe('QA Matrix Tests', () => {
     })
 
     test('should warn for 4-player teams with insufficient players (10 players, expected 8 per match)', () => {
-      const players: Player[] = Array.from({ length: 10 }, (_, i) => ({
-        id: `p${i + 1}`,
-        first_name: `Player${i + 1}`,
-        last_name: 'Test',
-        skill_level: 'Intermediate'
-      }))
-
       const optimalSizes = calculateOptimalTeamSizes(10, 4)
       
       // Should still be valid but may not create perfect 4-player teams

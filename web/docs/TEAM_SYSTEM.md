@@ -83,15 +83,15 @@ const { participants, teamCount } = buildParticipantsForMatch(players, 4)
 // participants: [{ playerId: 'p1', team: 'A' }, { playerId: 'p2', team: 'A' }, ...]
 ```
 
-#### `generateRoundRobinWithPlayers(teamPlayerMap: Map<TeamId, Player[]>)`
+#### `generateRoundRobinWithPlayers(teamPlayerMap: Map<TeamId, Player[]>, preferredTeamSize?: number)`
 **Team-Size Aware**: Generates matches between pre-sized teams.
 
 ```typescript
 import { generateRoundRobinWithPlayers } from '@/lib/utils/team-utils'
 
-// Teams should be pre-sized using calculateOptimalTeamSizes()
-const matches = generateRoundRobinWithPlayers(teamPlayerMap)
-// Creates matches respecting the original team size preferences
+// Generate matches with explicit preferred team size
+const matches = generateRoundRobinWithPlayers(teamPlayerMap, 4)
+// Creates matches respecting the preferred team size of 4 players
 ```
 
 ## 🎨 Color System

@@ -17,6 +17,7 @@ import {
 import EditMatchForm from '@/components/forms/edit-match-form'
 import MatchProfileView from '@/components/modals/match-profile-view'
 import { matchService, type Match, type MatchFilters } from '@/lib/services/match-service'
+import { getTeamVsDisplay } from '@/lib/utils/match-utils'
 
 
 const statusColors = {
@@ -298,22 +299,11 @@ export default function MatchesPage() {
                         <h3 className="font-medium text-gray-900">
                           {match.title}
                         </h3>
-                        {match.participants.length >= 4 && (() => {
-                          // Filter players dynamically based on teams
-                          const teamGroups = new Map();
-                          match.participants.forEach(p => {
-                            if (p.player && p.team) {
-                              if (!teamGroups.has(p.team)) {
-                                teamGroups.set(p.team, []);
-                              }
-                              teamGroups.get(p.team).push(`${p.player.first_name} ${p.player.last_name}`);
-                            }
-                          });
-                          const teamValues = Array.from(teamGroups.values());
-                          const [teamA, teamB] = teamValues.map(players => players.join(', '));
-                          return teamA && teamB ? (
+                        {match.participants.length >= 2 && (() => {
+                          const teamVsDisplay = getTeamVsDisplay(match.participants);
+                          return teamVsDisplay ? (
                             <div className="text-xs text-gray-500">
-                              {teamA} vs {teamB}
+                              {teamVsDisplay}
                             </div>
                           ) : null
                         })()}

@@ -31,17 +31,8 @@ import {
   MatchTemplate, 
   TeamId
 } from '@/types/match'
-import { getTeamIds } from '@/lib/utils/match-utils'
+import { getTeamIds, getTeamColorsByIndex } from '@/lib/utils/match-utils'
 import { calculateOptimalTeamSizes, generateRoundRobinWithPlayers, buildParticipantsForMatch } from '@/lib/utils/team-utils'
-
-// Color palette for team assignments
-const colorPalette = [
-  { background: 'bg-blue-100', text: 'text-blue-600', lightBackground: 'bg-blue-50' },
-  { background: 'bg-purple-100', text: 'text-purple-600', lightBackground: 'bg-purple-50' },
-  { background: 'bg-green-100', text: 'text-green-600', lightBackground: 'bg-green-50' },
-  { background: 'bg-pink-100', text: 'text-pink-600', lightBackground: 'bg-pink-50' },
-  { background: 'bg-yellow-100', text: 'text-yellow-600', lightBackground: 'bg-yellow-50' }
-]
 
 interface GenerationSettings {
   balanceSkills: boolean
@@ -75,6 +66,11 @@ export default function GenerateMatchesPage() {
   const [matchDuration, setMatchDuration] = useState(90)
   const [breakBetweenMatches] = useState(15)
   const [teamSize, setTeamSize] = useState(4)
+  
+  // Console log when teamSize state changes
+  useEffect(() => {
+    console.log('🎯 [DATA FLOW] teamSize state changed:', teamSize)
+  }, [teamSize])
 
   // Single match form data
   const [singleMatchData, setSingleMatchData] = useState<CreateMatchData>({
@@ -161,11 +157,12 @@ export default function GenerateMatchesPage() {
     return slots
   }
 
-  const generateBalancedMatches = () => {
-const timeSlots = generateTimeSlots()
+  const generateBalancedMatches = (params?: { preferredTeamSize?: number }) => {
+    const preferredTeamSize = params?.preferredTeamSize || teamSize
+    const timeSlots = generateTimeSlots()
     const availablePlayersList = players.filter(p => availablePlayers.includes(p.id))
     
-    const optimal = calculateOptimalTeamSizes(availablePlayersList.length, teamSize)
+    const optimal = calculateOptimalTeamSizes(availablePlayersList.length, preferredTeamSize)
     const playersNeeded = optimal.teamSize * 2
     
     if (availablePlayersList.length < playersNeeded) {
@@ -187,7 +184,12 @@ if (playerPool.length >= playersNeeded) {
           const matchPlayers = selectPlayersForMatch(playerPool, playersNeeded)
           if (matchPlayers.length >= playersNeeded) {
             // Assign teams based on dynamic teamIds
-const { participants } = buildParticipantsForMatch(matchPlayers, optimal.teamSize)
+            console.log('🎯 [DATA FLOW] About to call buildParticipantsForMatch (generateBalancedMatches) with:', {
+              matchPlayersCount: matchPlayers.length,
+              teamSizeArg: optimal.teamSize,
+              originalTeamSize: teamSize
+            })
+            const { participants } = buildParticipantsForMatch(matchPlayers, optimal.teamSize)
             
             const template: MatchTemplate = {
               id: `${slotIndex}-${courtIndex}-${Date.now()}`,
@@ -252,7 +254,8 @@ const selectPlayersForMatch = (playerPool: Player[], count: number = 4) => {
     return mostCommon || 'Mixed'
   }
 
-  const generateMixedFormat = () => {
+  const generateMixedFormat = (params?: { preferredTeamSize?: number }) => {
+    const preferredTeamSize = params?.preferredTeamSize || teamSize
     const availablePlayersList = players.filter(p => availablePlayers.includes(p.id))
     
     if (availablePlayersList.length < 4) {
@@ -280,7 +283,11 @@ const selectPlayersForMatch = (playerPool: Player[], count: number = 4) => {
       if (court) {
         const matchPlayers = playerPool.splice(0, 4) // Take first 4 players
         // Assign teams for doubles based on dynamic teamIds
-const { participants } = buildParticipantsForMatch(matchPlayers, 2)
+        console.log('🎯 [DATA FLOW] About to call buildParticipantsForMatch (generateMixedFormat) with:', {
+          matchPlayersCount: matchPlayers.length,
+          teamSizeArg: 2
+        })
+        const { participants } = buildParticipantsForMatch(matchPlayers, 2)
         
         const template: MatchTemplate = {
           id: `mixed-d-${i}-${Date.now()}`,
@@ -417,7 +424,14 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
   }
 
 
-  const generateTeamMatches = () => {
+  const generateTeamMatches = (params?: { preferredTeamSize?: number }) => {
+    const preferredTeamSize = params?.preferredTeamSize || teamSize
+    console.log('🎯 [DATA FLOW] generateTeamMatches called with:', {
+      params,
+      preferredTeamSize,
+      teamSize: teamSize,
+      availablePlayersCount: players.filter(p => availablePlayers.includes(p.id)).length
+    })
     const availablePlayersList = players.filter(p => availablePlayers.includes(p.id))
     
     if (availablePlayersList.length < 6) {
@@ -427,7 +441,12 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
 
     // Sort players by skill level for better team balancing
     const sortedPlayers = sortPlayersBySkill(availablePlayersList)
-    const teams = createBalancedTeams(sortedPlayers)
+    console.log('🎯 [DATA FLOW] About to call createBalancedTeams with preferredTeamSize:', preferredTeamSize)
+    const teams = createBalancedTeams(sortedPlayers, preferredTeamSize)
+    console.log('🎯 [DATA FLOW] createBalancedTeams returned:', {
+      teamsCount: teams.length,
+      teamSizes: teams.map(team => team.length)
+    })
     
     if (teams.length < 2) {
       alert('Not enough players to create balanced teams')
@@ -444,8 +463,15 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
       teamPlayerMap.set(teamIds[i], teams[i])
     }
 
-    // 3. Generate round-robin matches with player assignments using the helper
-    const roundRobinMatches = generateRoundRobinWithPlayers(teamPlayerMap)
+    // 4. Generate round-robin matches with player assignments using the helper
+    console.log('🎯 [DATA FLOW] About to call generateRoundRobinWithPlayers with:', {
+      teamPlayerMapSize: teamPlayerMap.size,
+      preferredTeamSize: preferredTeamSize
+    })
+    const roundRobinMatches = generateRoundRobinWithPlayers(teamPlayerMap, preferredTeamSize)
+    console.log('🎯 [DATA FLOW] generateRoundRobinWithPlayers returned:', {
+      matchesCount: roundRobinMatches.length
+    })
     
     // 4. Enhance the matches with time slots and court assignments
     const enhancedMatches = enhanceMatchesWithTimeAndCourt(roundRobinMatches)
@@ -542,10 +568,18 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
     })
   }
 
-  const createBalancedTeams = (sortedPlayers: Player[]) => {
+  const createBalancedTeams = (sortedPlayers: Player[], preferredTeamSize?: number) => {
     const teams: Player[][] = []
     const totalPlayers = sortedPlayers.length
-    const optimalSizes = calculateOptimalTeamSizes(totalPlayers, teamSize)
+    const teamSizeToUse = preferredTeamSize || teamSize
+    console.log('🎯 [DATA FLOW] createBalancedTeams called with:', {
+      totalPlayers,
+      preferredTeamSize,
+      teamSizeToUse,
+      fallbackTeamSize: teamSize
+    })
+    const optimalSizes = calculateOptimalTeamSizes(totalPlayers, teamSizeToUse)
+    console.log('🎯 [DATA FLOW] createBalancedTeams got optimalSizes:', optimalSizes)
     
     if (!optimalSizes.isValid) {
       return teams
@@ -609,7 +643,8 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
   //   return team.map((p, i) => `${i + 1}. ${p.first_name} ${p.last_name}`).join(', ')
   // }
 
-  const generateRoundRobin = () => {
+  const generateRoundRobin = (params?: { preferredTeamSize?: number }) => {
+    const preferredTeamSize = params?.preferredTeamSize || teamSize
     const availablePlayersList = players.filter(p => availablePlayers.includes(p.id))
     
     if (availablePlayersList.length < 4) {
@@ -643,7 +678,12 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
       
       if (court) {
         // Assign teams for round robin based on dynamic teamIds
-const { participants } = buildParticipantsForMatch(combo, 2)
+        console.log('🎯 [DATA FLOW] About to call buildParticipantsForMatch (generateRoundRobin) with:', {
+          comboLength: combo.length,
+          preferredTeamSize: preferredTeamSize,
+          originalTeamSize: teamSize
+        })
+        const { participants } = buildParticipantsForMatch(combo, preferredTeamSize)
         
         const template: MatchTemplate = {
           id: `rr-${index}-${Date.now()}`,
@@ -758,6 +798,7 @@ const promises = matchTemplates.map(async template => {
               <Button
                 variant="outline"
                 size="sm"
+                data-cy="select-all-players"
                 onClick={() => setAvailablePlayers(players.map(p => p.id))}
               >
                 Select All
@@ -1083,14 +1124,19 @@ const promises = matchTemplates.map(async template => {
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Recommendation for {availablePlayers.length} Players</Label>
                         <div className="text-sm">
-                          {(() => {
-                            const recommendation = calculateOptimalTeamSizes(availablePlayers.length, teamSize)
-                            return (
-                              <div className={`p-2 rounded ${recommendation.isValid ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                                {recommendation.description}
-                              </div>
-                            )
-                          })()}
+                        {(() => {
+                          console.log('🎯 [DATA FLOW] calculateOptimalTeamSizes called with:', {
+                            availablePlayers: availablePlayers.length,
+                            teamSize: teamSize
+                          })
+                          const recommendation = calculateOptimalTeamSizes(availablePlayers.length, teamSize)
+                          console.log('🎯 [DATA FLOW] calculateOptimalTeamSizes returned:', recommendation)
+                          return (
+                            <div className={`p-2 rounded ${recommendation.isValid ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`} data-cy="team-recommendation">
+                              {recommendation.description}
+                            </div>
+                          )
+                        })()}
                         </div>
                         {(() => {
                           const options = calculateOptimalTeamSizes(availablePlayers.length, teamSize).options
@@ -1123,15 +1169,15 @@ const promises = matchTemplates.map(async template => {
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Button onClick={generateBalancedMatches} variant="outline">
+                    <Button onClick={() => generateBalancedMatches()} variant="outline">
                       <Target className="h-4 w-4 mr-2" />
                       Generate Balanced Matches
                     </Button>
-                    <Button onClick={generateMixedFormat} variant="outline">
+                    <Button onClick={() => generateMixedFormat()} variant="outline">
                       <Users className="h-4 w-4 mr-2" />
                       Generate Mixed Format
                     </Button>
-                    <Button onClick={generateTeamMatches} variant="outline">
+                    <Button onClick={() => generateTeamMatches()} variant="outline" data-cy="generate-team-matches">
                       <Trophy className="h-4 w-4 mr-2" />
                       Generate Team Matches (Round Robin)
                     </Button>
@@ -1139,7 +1185,7 @@ const promises = matchTemplates.map(async template => {
                       <Trophy className="h-4 w-4 mr-2" />
                       Generate Bracket Tournament
                     </Button>
-                    <Button onClick={generateRoundRobin} variant="outline">
+                    <Button onClick={() => generateRoundRobin()} variant="outline">
                       <Shuffle className="h-4 w-4 mr-2" />
                       Generate Round Robin
                     </Button>
@@ -1210,16 +1256,16 @@ const promises = matchTemplates.map(async template => {
                     return (
                       <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] sm:gap-6 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
                         {Array.from(teamData.entries()).map(([teamId, data], teamIndex) => {
-                          const color = colorPalette[teamIndex % colorPalette.length]
+const color = getTeamColorsByIndex(teamIndex)
                           const teamPlayersArray = Array.from(data.players).map(playerId => 
                             players.find(p => p.id === playerId)
                           ).filter(Boolean)
                           
                           return (
-                            <div key={teamId} className={`border rounded-lg p-4 ${color.lightBackground}`}>
+                            <div key={teamId} className={`border rounded-lg p-4 ${color.lightBackground}`} data-cy="team-card">
                               <div className="text-center mb-4">
                                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 ${color.background} ${color.text}`}>
-                                  <span className="text-xl font-bold">{teamId}</span>
+                                  <span className="text-xl font-bold" data-cy="team-id">{teamId}</span>
                                 </div>
                                 <h3 className="font-semibold text-lg">Team {teamId}</h3>
                                 <p className="text-sm text-gray-500">{teamPlayersArray.length} players • {data.matches.length} matches</p>
@@ -1229,7 +1275,7 @@ const promises = matchTemplates.map(async template => {
                               <div className="space-y-2 mb-4">
                                 <h4 className="font-medium text-sm text-gray-700">Players:</h4>
                                 {teamPlayersArray.map((player) => (
-                                  <div key={player!.id} className={`p-2 rounded text-center bg-white border`}>
+                                  <div key={player!.id} className={`p-2 rounded text-center bg-white border`} data-cy="team-player">
                                     <div className="font-medium text-sm">
                                       {player!.first_name} {player!.last_name}
                                     </div>
@@ -1241,7 +1287,7 @@ const promises = matchTemplates.map(async template => {
                               </div>
                               
                               {/* Team Matches */}
-                              <div className="space-y-2">
+                              <div className="space-y-2" data-cy="team-matches">
                                 <h4 className="font-medium text-sm text-gray-700">Matches:</h4>
                                 {data.matches.map((match) => {
                                   const opponent = Array.from(data.opponents).find(opponentId => 
@@ -1290,9 +1336,9 @@ const promises = matchTemplates.map(async template => {
                 <CardContent>
                   <div className="space-y-4">
                     {matchTemplates.map((template, index) => (
-                      <div key={template.id} className="border rounded-lg p-4 space-y-3">
+                      <div key={template.id} className="border rounded-lg p-4 space-y-3" data-cy="match-template">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-medium">Match {index + 1}</h4>
+                          <h4 className="font-medium" data-cy="match-title">Match {index + 1}</h4>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1340,7 +1386,7 @@ const promises = matchTemplates.map(async template => {
                           </div>
                         </div>
 
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600" data-cy="match-participants">
                           {(() => {
                             // Group participants by team
                             const teamGroups = new Map<string, GeneratedParticipant[]>()

@@ -2,6 +2,29 @@ import { TeamId, MatchTemplate, Player, GeneratedParticipant } from '@/types/mat
 import { getTeamIds } from './match-utils';
 
 /**
+ * Parameters for team creation functions
+ */
+export interface TeamCreationParams {
+  players: Player[];
+  preferredTeamSize: number;
+  balanceSkills?: boolean;
+  allowMixedSkills?: boolean;
+  maxSkillDifference?: number;
+}
+
+/**
+ * Parameters for match generation functions
+ */
+export interface MatchGenerationParams {
+  players: Player[];
+  preferredTeamSize: number;
+  balanceSkills?: boolean;
+  allowMixedSkills?: boolean;
+  maxSkillDifference?: number;
+  teamPlayerMap?: Map<TeamId, Player[]>;
+}
+
+/**
  * Generate Round Robin Matches for a list of teams
  * @param teams - Array of team IDs to generate matches for
  * @returns Array of match templates for round robin format
@@ -49,12 +72,19 @@ export function buildParticipantsForMatch(
   players: Player[],
   preferredTeamSize: number
 ): { participants: GeneratedParticipant[]; teamCount: number } {
+  console.log('🎯 [DATA FLOW] buildParticipantsForMatch called with:', {
+    playersCount: players.length,
+    preferredTeamSize
+  })
   const optimalTeamSizes = calculateOptimalTeamSizes(players.length, preferredTeamSize);
+  console.log('🎯 [DATA FLOW] buildParticipantsForMatch got optimalTeamSizes:', optimalTeamSizes)
   
-  // For Round Robin: Use calculated playersPerTeam array to determine team assignments
-  if (optimalTeamSizes.isValid && optimalTeamSizes.playersPerTeam.length > 0) {
+  // Use optimal team sizes only if they're valid AND match the preferred team size
+  if (optimalTeamSizes.isValid && 
+      optimalTeamSizes.teamSize === preferredTeamSize && 
+      optimalTeamSizes.playersPerTeam.length > 0) {
     const playersPerTeam = optimalTeamSizes.playersPerTeam;
-    const teamCount = optimalTeamSizes.teamCount; // Use the actual calculated team count
+    const teamCount = optimalTeamSizes.teamCount;
     const teamIds = getTeamIds(teamCount);
     
     const participants: GeneratedParticipant[] = [];
@@ -74,28 +104,122 @@ export function buildParticipantsForMatch(
       }
     }
     
-    return {
+    const result = {
       participants,
       teamCount
     };
+    console.log('🎯 [DATA FLOW] buildParticipantsForMatch result (optimal path):', {
+      participantsCount: result.participants.length,
+      teamCount: result.teamCount,
+      participants: result.participants
+    })
+    return result;
   }
   
-  // Fallback: Simple 2-team division for cases where optimal sizing isn't available
-  const teamCount = 2;
-  const playersPerTeam = Math.floor(players.length / teamCount);
-  const selectedPlayers = players.slice(0, playersPerTeam * teamCount);
+  // Fallback: Use preferred team size to create teams
+  // Calculate how many full teams we can create with the preferred size
+  const fullTeamCount = Math.floor(players.length / preferredTeamSize);
+  const remainder = players.length % preferredTeamSize;
+  
+  // Need at least 2 teams for a match
+  if (fullTeamCount < 2) {
+    // Not enough players for 2 full teams of preferred size
+    // Try to respect preferred team size when possible; only drop to 2-person teams if necessary
+    
+    // Calculate minimum viable team size (2 players per team)
+    const minTeamSize = 2;
+    const minPlayersForMatch = minTeamSize * 2;  // 2 teams × 2 players each
+    
+    // Check if we have enough players for at least 2 teams with preferred size
+    if (players.length >= preferredTeamSize * 2) {
+      // We can create 2 teams with preferred size (or close to it)
+      const teamCount = 2;
+      const playersPerTeam = Math.floor(players.length / teamCount);
+      const remainder = players.length % teamCount;
+      
+      // Distribute players as evenly as possible between 2 teams
+      const playersPerTeamArray = [playersPerTeam, playersPerTeam];
+      if (remainder > 0) {
+        playersPerTeamArray[0] += remainder; // Add remainder to first team
+      }
+      
+      const teamIds = getTeamIds(teamCount);
+      const participants: GeneratedParticipant[] = [];
+      let playerIndex = 0;
+      
+      // Assign players to teams
+      for (let i = 0; i < teamCount && playerIndex < players.length; i++) {
+        const currentTeamSize = playersPerTeamArray[i];
+        for (let j = 0; j < currentTeamSize && playerIndex < players.length; j++) {
+          participants.push({
+            playerId: players[playerIndex].id,
+            team: teamIds[i]
+          });
+          playerIndex++;
+        }
+      }
+      
+      return {
+        participants,
+        teamCount
+      };
+    } else if (players.length >= minPlayersForMatch) {
+      // Fall back to minimum viable team size (2 players per team)
+      const teamCount = 2;
+      const playersPerTeam = Math.floor(players.length / teamCount);
+      const selectedPlayers = players.slice(0, playersPerTeam * teamCount);
+      const teamIds = getTeamIds(teamCount);
+
+      const participants: GeneratedParticipant[] = [];
+      selectedPlayers.forEach((player, index) => {
+        const teamIndex = Math.floor(index / playersPerTeam);
+        const teamId = teamIds[teamIndex];
+        participants.push({
+          playerId: player.id,
+          team: teamId
+        });
+      });
+
+      return {
+        participants,
+        teamCount
+      };
+    } else {
+      // Not enough players even for minimum viable match (4 players total)
+      // Return empty result to indicate insufficient players
+      return {
+        participants: [],
+        teamCount: 0
+      };
+    }
+  }
+  
+  // Create playersPerTeam array with preferred size for each full team
+  // and add remainder to the final team
+  const playersPerTeam = Array(fullTeamCount).fill(preferredTeamSize);
+  if (remainder > 0) {
+    playersPerTeam[playersPerTeam.length - 1] += remainder;
+  }
+  
+  const teamCount = fullTeamCount;
   const teamIds = getTeamIds(teamCount);
-
+  
   const participants: GeneratedParticipant[] = [];
-  selectedPlayers.forEach((player, index) => {
-    const teamIndex = Math.floor(index / playersPerTeam);
-    const teamId = teamIds[teamIndex];
-    participants.push({
-      playerId: player.id,
-      team: teamId
-    });
-  });
-
+  let playerIndex = 0;
+  
+  // Assign players to teams based on preferred team size pattern
+  for (let i = 0; i < teamCount && playerIndex < players.length; i++) {
+    const currentTeamSize = playersPerTeam[i];
+    
+    for (let j = 0; j < currentTeamSize && playerIndex < players.length; j++) {
+      participants.push({
+        playerId: players[playerIndex].id,
+        team: teamIds[i]
+      });
+      playerIndex++;
+    }
+  }
+  
   return {
     participants,
     teamCount
@@ -107,13 +231,17 @@ export function buildParticipantsForMatch(
  * @returns Array of match templates for bracket tournament format
  * TODO: Implement bracket generation logic (single elimination, double elimination, etc.)
  */
-export function generateBracketTeams(_teams: TeamId[]): MatchTemplate[] {
+export function generateBracketTeams(teams: TeamId[]): MatchTemplate[] {
   // Placeholder implementation for future bracket tournament generation
   // This would include:
   // - Single elimination brackets
   // - Double elimination brackets
   // - Swiss system tournaments
   // - Seeded bracket generation
+  
+  // For now, return empty array to avoid unused parameter warning
+  // Future implementation will use the teams parameter
+  console.log(`Bracket generation not yet implemented for ${teams.length} teams`);
   return [];
 }
 
@@ -147,21 +275,78 @@ export interface OptimalTeamSizeResult {
  * @returns Object containing team size recommendations and validation
  */
 export function calculateOptimalTeamSizes(totalPlayers: number, preferredTeamSize?: number): OptimalTeamSizeResult {
-  // Not enough players for team matches
-  if (totalPlayers < 6) {
-    return {
+  console.log('🎯 [DATA FLOW] calculateOptimalTeamSizes called with:', {
+    totalPlayers,
+    preferredTeamSize
+  })
+  
+// Adjust the condition to handle cases where remaining possible teams might align with preferred team size
+  const minPlayersNeeded = preferredTeamSize ? preferredTeamSize * 2 : 6;
+  
+  if (totalPlayers < minPlayersNeeded) {
+    const result = {
       teamSize: 0,
       teamCount: 0,
       playersPerTeam: [],
       isValid: false,
-      description: 'Not enough players for team matches (minimum 6 required)',
+      description: `Not enough players for team matches (minimum ${minPlayersNeeded} required)`,
       options: []
     };
+    console.log('🎯 [DATA FLOW] calculateOptimalTeamSizes result (insufficient players):', result)
+    return result;
   }
 
-  // Calculate the best team configuration
-  const bestConfiguration = findBestTeamConfiguration(totalPlayers, preferredTeamSize);
-  
+  // Calculate the best team configuration with strict preferred team size
+  if (preferredTeamSize) {
+    const evenTeams = Math.floor(totalPlayers / preferredTeamSize);
+    const remainder = totalPlayers % preferredTeamSize;
+
+    if (evenTeams >= 2) {
+      const playersPerTeam = Array(evenTeams).fill(preferredTeamSize);
+
+      if (remainder > 0) {
+        // Add remainder to the last team instead of creating a new team
+        playersPerTeam[playersPerTeam.length - 1] += remainder;
+      }
+
+      const description = remainder === 0
+        ? `${evenTeams} teams of ${preferredTeamSize} players each`
+        : `${evenTeams - 1} teams of ${preferredTeamSize} players + 1 team of ${preferredTeamSize + remainder} players`;
+
+      const result = {
+        teamSize: preferredTeamSize,
+        teamCount: evenTeams,
+        playersPerTeam,
+        isValid: true,
+        description,
+        options: [
+          {
+            teamSize: preferredTeamSize,
+            teamCount: evenTeams,
+            playersPerTeam,
+            description,
+            efficiency: 100,
+            isOptimal: remainder === 0
+          }
+        ]
+      };
+      console.log('🎯 [DATA FLOW] calculateOptimalTeamSizes result (preferred size):', result)
+      return result;
+    } else {
+      return {
+        teamSize: 0,
+        teamCount: 0,
+        playersPerTeam: [],
+        isValid: false,
+        description: 'Not enough players to form more than one full team of preferred size',
+        options: []
+      };
+    }
+  }
+
+  // Fallback to flexible size calculation if no specific preferred size
+  const bestConfiguration = findBestTeamConfiguration(totalPlayers);
+
   if (!bestConfiguration) {
     return {
       teamSize: 0,
@@ -179,7 +364,7 @@ export function calculateOptimalTeamSizes(totalPlayers: number, preferredTeamSiz
     playersPerTeam: bestConfiguration.playersPerTeam,
     isValid: true,
     description: bestConfiguration.description,
-    options: getAllTeamConfigurations(totalPlayers, preferredTeamSize) // Ensure options are included
+    options: getAllTeamConfigurations(totalPlayers) // Ensure options are included
   };
 }
 
@@ -193,10 +378,35 @@ function findBestTeamConfiguration(totalPlayers: number, preferredTeamSize?: num
   const configurations: TeamConfiguration[] = [];
   
   // Try different team sizes and combinations
-  const minSize = preferredTeamSize || 3;
-  const maxSize = preferredTeamSize || Math.min(6, Math.floor(totalPlayers / 2));
-  
-  for (let size = minSize; size <= maxSize; size++) {
+  if (preferredTeamSize) {
+    const evenTeams = Math.floor(totalPlayers / preferredTeamSize);
+    const remainder = totalPlayers % preferredTeamSize;
+
+    if (evenTeams >= 2) {
+      const playersPerTeam = Array(evenTeams).fill(preferredTeamSize);
+      if (remainder > 0) {
+        // Add remainder to the last team instead of creating a new team
+        playersPerTeam[playersPerTeam.length - 1] += remainder;
+      }
+      
+      const description = remainder === 0
+        ? `${evenTeams} teams of ${preferredTeamSize} players each`
+        : `${evenTeams - 1} teams of ${preferredTeamSize} players + 1 team of ${preferredTeamSize + remainder} players`;
+      
+      configurations.push({
+        teamSize: preferredTeamSize,
+        teamCount: evenTeams,
+        playersPerTeam,
+        description,
+        efficiency: 100,
+        isOptimal: remainder === 0
+      });
+    }
+  } else {
+    const minSize = 3;
+    const maxSize = Math.min(6, Math.floor(totalPlayers / 2));
+
+    for (let size = minSize; size <= maxSize; size++) {
     const evenTeams = Math.floor(totalPlayers / size);
     const remainder = totalPlayers % size;
     
@@ -253,6 +463,7 @@ function findBestTeamConfiguration(totalPlayers: number, preferredTeamSize?: num
         }
       }
     }
+    }
   }
   
   // Sort configurations by preference:
@@ -276,17 +487,45 @@ function findBestTeamConfiguration(totalPlayers: number, preferredTeamSize?: num
  * @returns Array of all valid team configurations
  */
 export function getAllTeamConfigurations(totalPlayers: number, preferredTeamSize?: number): TeamConfiguration[] {
-  if (totalPlayers < 6) {
+  const minPlayersNeeded = preferredTeamSize ? preferredTeamSize * 2 : 6;
+  if (totalPlayers < minPlayersNeeded) {
     return [];
   }
 
   const configurations: TeamConfiguration[] = [];
   
-  // Try different team sizes
-  const minSize = preferredTeamSize || 3;
-  const maxSize = preferredTeamSize || Math.min(6, Math.floor(totalPlayers / 2));
-  
-  for (let size = minSize; size <= maxSize; size++) {
+  // When preferredTeamSize is specified, only return configurations with that exact team size
+  if (preferredTeamSize) {
+    const size = preferredTeamSize;
+    const evenTeams = Math.floor(totalPlayers / size);
+    const remainder = totalPlayers % size;
+    
+    if (evenTeams >= 2) {
+      const playersPerTeam = Array(evenTeams).fill(size);
+      if (remainder > 0) {
+        // Add remainder to the last team instead of creating a new team
+        playersPerTeam[playersPerTeam.length - 1] += remainder;
+      }
+      
+      const description = remainder === 0
+        ? `${evenTeams} teams of ${size} players each`
+        : `${evenTeams - 1} teams of ${size} players + 1 team of ${size + remainder} players`;
+      
+      configurations.push({
+        teamSize: size,
+        teamCount: evenTeams,
+        playersPerTeam,
+        description,
+        efficiency: 100,
+        isOptimal: remainder === 0
+      });
+    }
+  } else {
+    // Try different team sizes for flexible sizing
+    const minSize = 3;
+    const maxSize = Math.min(6, Math.floor(totalPlayers / 2));
+    
+    for (let size = minSize; size <= maxSize; size++) {
     const evenTeams = Math.floor(totalPlayers / size);
     const remainder = totalPlayers % size;
     
@@ -343,6 +582,7 @@ export function getAllTeamConfigurations(totalPlayers: number, preferredTeamSize
         }
       }
     }
+    }
   }
   
   // Sort by preference
@@ -364,9 +604,19 @@ export function getAllTeamConfigurations(totalPlayers: number, preferredTeamSize
  * Each match uses the first 2 players from each team for doubles matches.
  * 
  * @param teamPlayerMap - Map of team IDs to their players (teams should be pre-sized optimally)
+ * @param preferredTeamSize - The preferred team size (used for validation and future enhancements)
  * @returns Array of match templates with player assignments
  */
-export function generateRoundRobinWithPlayers(teamPlayerMap: Map<TeamId, Player[]>): MatchTemplate[] {
+export function generateRoundRobinWithPlayers(
+  teamPlayerMap: Map<TeamId, Player[]>,
+  preferredTeamSize: number
+): MatchTemplate[] {
+  console.log('🎯 [DATA FLOW] generateRoundRobinWithPlayers called with:', {
+    teamPlayerMapSize: teamPlayerMap.size,
+    preferredTeamSize,
+    teamIds: Array.from(teamPlayerMap.keys()),
+    teamSizes: Array.from(teamPlayerMap.values()).map(team => team.length)
+  })
   const matches: MatchTemplate[] = [];
   const teamIds = Array.from(teamPlayerMap.keys());
   let matchIndex = 0;
@@ -406,5 +656,9 @@ export function generateRoundRobinWithPlayers(teamPlayerMap: Map<TeamId, Player[
       }
     }
   }
+  console.log('🎯 [DATA FLOW] generateRoundRobinWithPlayers result:', {
+    matchesCount: matches.length,
+    matches: matches.map(m => ({ id: m.id, title: m.title, participantsCount: m.participants.length }))
+  })
   return matches;
 }

@@ -63,7 +63,7 @@ describe('Team UI Rendering', () => {
       cy.wrap($teamCard).find('[data-cy=team-matches]').should('exist')
     })
 
-    // Verify team colors are applied correctly
+    // Verify team colors are applied correctly (teams use dynamic color system)
     cy.get('[data-cy=team-card]').first().should('have.class', 'bg-blue-50')
     cy.get('[data-cy=team-card]').eq(1).should('have.class', 'bg-purple-50')
     cy.get('[data-cy=team-card]').eq(2).should('have.class', 'bg-green-50')
