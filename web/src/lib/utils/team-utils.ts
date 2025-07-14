@@ -629,25 +629,41 @@ export function generateRoundRobinWithPlayers(
       const teamA = teamPlayerMap.get(teamAId)!;
       const teamB = teamPlayerMap.get(teamBId)!;
       
-      // Create match with first 2 players from each team
-      if (teamA.length >= 2 && teamB.length >= 2) {
-        const participants: GeneratedParticipant[] = [
-          { playerId: teamA[0].id, team: teamAId },
-          { playerId: teamA[1].id, team: teamAId },
-          { playerId: teamB[0].id, team: teamBId },
-          { playerId: teamB[1].id, team: teamBId }
-        ];
+      // Create match with players from both teams based on preferredTeamSize
+      const minPlayersPerTeam = Math.min(preferredTeamSize, teamA.length, teamB.length);
+      
+      if (minPlayersPerTeam >= 1) {
+        const participants: GeneratedParticipant[] = [];
+        
+        // Add players from Team A
+        for (let k = 0; k < minPlayersPerTeam; k++) {
+          participants.push({
+            playerId: teamA[k].id,
+            team: teamAId
+          });
+        }
+        
+        // Add players from Team B
+        for (let k = 0; k < minPlayersPerTeam; k++) {
+          participants.push({
+            playerId: teamB[k].id,
+            team: teamBId
+          });
+        }
+        
+        const matchType = minPlayersPerTeam === 1 ? 'Singles' : 'Doubles';
+        const maxPlayers = minPlayersPerTeam * 2; // Team A players + Team B players
         
         matches.push({
           id: `rr-match-${matchIndex}`,
           title: `Team ${teamAId} vs Team ${teamBId}`,
-          match_type: 'Doubles',
+          match_type: matchType,
           skill_level: 'Mixed',
           court_id: '',
           date: '',
           time: '',
           duration_minutes: 90,
-          max_players: 4,
+          max_players: maxPlayers,
           description: `Round Robin: Team ${teamAId} vs Team ${teamBId}`,
           notes: 'Round Robin tournament match',
           participants
@@ -658,7 +674,7 @@ export function generateRoundRobinWithPlayers(
   }
   console.log('🎯 [DATA FLOW] generateRoundRobinWithPlayers result:', {
     matchesCount: matches.length,
-    matches: matches.map(m => ({ id: m.id, title: m.title, participantsCount: m.participants.length }))
+    matches: matches.map(m => ({ id: m.id, title: m.title, participantsCount: m.participants.length, max_players: m.max_players }))
   })
   return matches;
 }
