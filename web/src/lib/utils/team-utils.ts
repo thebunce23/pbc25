@@ -1,7 +1,12 @@
-export function generateTeamVsTeamMatches(teamPlayerMap: Map<TeamId, Player[]>, preferredTeamSize: number): MatchTemplate[] {
+export function generateTeamVsTeamMatches(
+  teamPlayerMap: Map<TeamId, Player[]>, 
+  preferredTeamSize: number, 
+  rotationOptions?: PlayerRotationOptions
+): MatchTemplate[] {
   console.log('🎯 [DATA FLOW] generateTeamVsTeamMatches called with:', {
     teamPlayerMapSize: teamPlayerMap.size,
     preferredTeamSize,
+    rotationOptions,
     teamIds: Array.from(teamPlayerMap.keys()),
     teamSizes: Array.from(teamPlayerMap.values()).map(team => team.length)
   });
@@ -9,6 +14,16 @@ export function generateTeamVsTeamMatches(teamPlayerMap: Map<TeamId, Player[]>, 
   const matches: MatchTemplate[] = [];
   const teamIds = Array.from(teamPlayerMap.keys());
   let matchIndex = 0;
+  
+  // Create global player rest tracker for all teams
+  const globalPlayerRestTracker = new Map<string, number>(); // playerId -> consecutive games count
+  
+  // Initialize tracker for all players
+  teamPlayerMap.forEach((players, teamId) => {
+    players.forEach(player => {
+      globalPlayerRestTracker.set(player.id, 0);
+    });
+  });
 
   // Iterate over pairs of teams (Team A vs Team B, Team C vs Team D, etc.)
   for (let i = 0; i < teamIds.length; i += 2) {
@@ -18,46 +33,105 @@ export function generateTeamVsTeamMatches(teamPlayerMap: Map<TeamId, Player[]>, 
       const teamA = teamPlayerMap.get(teamAId)!;
       const teamB = teamPlayerMap.get(teamBId)!;
 
-      // Generate balanced matches between these two teams
-      const maxMatchesPerTeamPair = Math.min(teamA.length, teamB.length);
-      const playersPerMatch = Math.min(2, maxMatchesPerTeamPair); // 2 players per team for doubles
+      const rotationType = rotationOptions?.playerRotation || 'head-to-head';
+      const numberOfRounds = rotationOptions?.numberOfRounds || 1;
+      const playersPerMatch = 2; // 2 players per team for doubles
       
-      // Create different player combinations for multiple matches
-      for (let j = 0; j < maxMatchesPerTeamPair && j + playersPerMatch <= teamA.length; j += playersPerMatch) {
-        const participants: GeneratedParticipant[] = [];
-
-        // Add 2 players from Team A
-        for (let k = 0; k < playersPerMatch && j + k < teamA.length; k++) {
-          participants.push({ playerId: teamA[j + k].id, team: teamAId });
-        }
-
-        // Add 2 players from Team B
-        for (let k = 0; k < playersPerMatch && j + k < teamB.length; k++) {
-          participants.push({ playerId: teamB[j + k].id, team: teamBId });
-        }
-
-        // Only create match if we have enough players
-        if (participants.length === playersPerMatch * 2) {
-          const matchNumber = Math.floor(j / playersPerMatch) + 1;
-          matches.push({
-            id: `tvsm-${matchIndex}`,
-            title: `Team ${teamAId} vs Team ${teamBId} - Match ${matchNumber}`,
-            match_type: 'Doubles',
-            skill_level: 'Mixed',
-            court_id: '',
-            date: '',
-            time: '',
-            duration_minutes: 90,
-            max_players: 4,
-            description: `Team vs Team: ${teamAId} vs ${teamBId} - Match ${matchNumber}`,
-            notes: 'Paired team match with balanced player assignments',
-            participants
+      if (rotationType === 'all-combinations') {
+        // Generate proper all-combinations schedule with partnership constraints
+        const allCombinationsMatches = generateAllCombinationsSchedule(
+          teamA, teamAId, teamB, teamBId, numberOfRounds
+        );
+        
+        allCombinationsMatches.forEach((roundMatches, roundIndex) => {
+          roundMatches.forEach((matchParticipants, courtIndex) => {
+            const participants: GeneratedParticipant[] = [];
+            
+            // Add participants for this match
+            matchParticipants.forEach(player => {
+              participants.push({
+                playerId: player.id,
+                team: player.teamId
+              });
+            });
+            
+            const roundNumber = roundIndex + 1;
+            const courtNumber = courtIndex + 1;
+            matches.push({
+              id: `tvsm-${matchIndex}`,
+              title: `${teamAId} vs ${teamBId} - Round ${roundNumber} Court ${courtNumber}`,
+              match_type: 'Doubles',
+              skill_level: 'Mixed',
+              court_id: `court-${courtNumber}`,
+              date: '',
+              time: '',
+              duration_minutes: 90,
+              max_players: 4,
+              description: `Team vs Team: ${teamAId} vs ${teamBId} - Round ${roundNumber}, Court ${courtNumber} (All Combinations)`,
+              notes: `Round ${roundNumber}, Court ${courtNumber} - Each player partners with teammates exactly twice`,
+              participants
+            });
+            matchIndex++;
+            
+            // Update global rest tracker
+            updateGlobalPlayerRestTracker(participants, globalPlayerRestTracker);
           });
-          matchIndex++;
-        }
+        });
+        } else {
+          // Default head-to-head rotation with global player rest enforcement
+          for (let j = 0; j < numberOfRounds; j++) {
+            const participants: GeneratedParticipant[] = [];
+
+            // Select players from Team A considering global rest
+            const teamASelectedPlayers = selectPlayersWithGlobalRest(teamA, teamAId, playersPerMatch, globalPlayerRestTracker);
+            teamASelectedPlayers.forEach(player => {
+              participants.push({ playerId: player.id, team: teamAId });
+            });
+
+            // Select players from Team B considering global rest
+            const teamBSelectedPlayers = selectPlayersWithGlobalRest(teamB, teamBId, playersPerMatch, globalPlayerRestTracker);
+            teamBSelectedPlayers.forEach(player => {
+              participants.push({ playerId: player.id, team: teamBId });
+            });
+
+            // Only create match if we have enough players
+            if (participants.length === playersPerMatch * 2) {
+              const matchNumber = j + 1;
+              matches.push({
+                id: `tvsm-${matchIndex}`,
+                title: `Team ${teamAId} vs Team ${teamBId} - Match ${matchNumber}`,
+                match_type: 'Doubles',
+                skill_level: 'Mixed',
+                court_id: '',
+                date: '',
+                time: '',
+                duration_minutes: 90,
+                max_players: 4,
+                description: `Team vs Team: ${teamAId} vs ${teamBId} - Match ${matchNumber} (Head-to-Head)`,
+                notes: 'Paired team match with balanced player assignments',
+                participants
+              });
+              matchIndex++;
+              
+              // Update global rest tracker
+              updateGlobalPlayerRestTracker(participants, globalPlayerRestTracker);
+            }
+          }
       }
     }
   }
+  
+  // Log final player game counts
+  console.log('🔄 Final player consecutive game counts:', 
+    Array.from(globalPlayerRestTracker.entries()).reduce((acc, [playerId, count]) => {
+      const player = Array.from(teamPlayerMap.values()).flat().find(p => p.id === playerId);
+      if (player) {
+        acc[`${player.first_name} ${player.last_name}`] = count;
+      }
+      return acc;
+    }, {} as Record<string, number>)
+  );
+  
   console.log('🎯 [DATA FLOW] generateTeamVsTeamMatches result:', {
     matchesCount: matches.length,
     matches: matches.map(m => ({ id: m.id, title: m.title, participantsCount: m.participants.length, max_players: m.max_players }))
@@ -67,6 +141,108 @@ export function generateTeamVsTeamMatches(teamPlayerMap: Map<TeamId, Player[]>, 
 
 import { TeamId, MatchTemplate, Player, GeneratedParticipant } from '@/types/match';
 import { getTeamIds } from './match-utils';
+
+/**
+ * Create a player rotation schedule that ensures no player plays more than 2 consecutive matches
+ * @param teamSize - Number of players in the team
+ * @param numberOfRounds - Total number of rounds to schedule
+ * @param playersPerMatch - Number of players needed per match from this team
+ * @returns Array of arrays, each containing player indices for that round
+ */
+function createPlayerRotationSchedule(teamSize: number, numberOfRounds: number, playersPerMatch: number): number[][] {
+  const schedule: number[][] = [];
+  const playerRestTracker = new Array(teamSize).fill(0); // Track consecutive games for each player
+  const maxConsecutiveGames = 2;
+  
+  for (let round = 0; round < numberOfRounds; round++) {
+    const roundPlayers: number[] = [];
+    const availablePlayers: number[] = [];
+    
+    // Find players who can play (haven't reached max consecutive games)
+    for (let i = 0; i < teamSize; i++) {
+      if (playerRestTracker[i] < maxConsecutiveGames) {
+        availablePlayers.push(i);
+      }
+    }
+    
+    // If not enough available players, reset some players' rest counters
+    if (availablePlayers.length < playersPerMatch) {
+      // Reset players who have been resting the longest
+      const restingPlayers = [];
+      for (let i = 0; i < teamSize; i++) {
+        if (playerRestTracker[i] >= maxConsecutiveGames) {
+          restingPlayers.push(i);
+        }
+      }
+      
+      // Reset enough resting players to fill the match
+      const playersToReset = Math.min(restingPlayers.length, playersPerMatch - availablePlayers.length);
+      for (let i = 0; i < playersToReset; i++) {
+        playerRestTracker[restingPlayers[i]] = 0;
+        availablePlayers.push(restingPlayers[i]);
+      }
+    }
+    
+    // Select players for this round, prioritizing those who have rested longer
+    // Sort available players by their rest count (ascending - those who rested more get priority)
+    availablePlayers.sort((a, b) => {
+      // If both are at 0 consecutive games, prefer those who haven't played recently
+      if (playerRestTracker[a] === 0 && playerRestTracker[b] === 0) {
+        return 0; // Equal priority, will be selected in order
+      }
+      return playerRestTracker[a] - playerRestTracker[b];
+    });
+    
+    // Select the required number of players
+    for (let i = 0; i < Math.min(playersPerMatch, availablePlayers.length); i++) {
+      roundPlayers.push(availablePlayers[i]);
+    }
+    
+    // If still not enough players, fill with round-robin
+    while (roundPlayers.length < playersPerMatch && roundPlayers.length < teamSize) {
+      const fallbackIndex = (round * playersPerMatch + roundPlayers.length) % teamSize;
+      if (!roundPlayers.includes(fallbackIndex)) {
+        roundPlayers.push(fallbackIndex);
+      } else {
+        // Find first player not already selected
+        for (let i = 0; i < teamSize; i++) {
+          if (!roundPlayers.includes(i)) {
+            roundPlayers.push(i);
+            break;
+          }
+        }
+      }
+    }
+    
+    schedule.push(roundPlayers);
+    
+    // Update rest tracker
+    for (let i = 0; i < teamSize; i++) {
+      if (roundPlayers.includes(i)) {
+        // Player is playing this round, increment consecutive count
+        playerRestTracker[i]++;
+      } else {
+        // Player is resting, reset consecutive count
+        playerRestTracker[i] = 0;
+      }
+    }
+  }
+  
+  console.log('🔄 Player rotation schedule:', {
+    teamSize,
+    numberOfRounds,
+    playersPerMatch,
+    schedule: schedule.map((round, idx) => ({ round: idx + 1, players: round })),
+    playerGameCounts: schedule.reduce((acc, round) => {
+      round.forEach(playerId => {
+        acc[playerId] = (acc[playerId] || 0) + 1;
+      });
+      return acc;
+    }, {} as Record<number, number>)
+  });
+  
+  return schedule;
+}
 
 /**
  * Parameters for team creation functions
@@ -89,6 +265,14 @@ export interface MatchGenerationParams {
   allowMixedSkills?: boolean;
   maxSkillDifference?: number;
   teamPlayerMap?: Map<TeamId, Player[]>;
+}
+
+/**
+ * Player rotation options for team matches
+ */
+export interface PlayerRotationOptions {
+  playerRotation: 'head-to-head' | 'all-combinations';
+  numberOfRounds: number;
 }
 
 /**
@@ -782,19 +966,302 @@ export function getAllTeamConfigurations(totalPlayers: number, preferredTeamSize
  * @param preferredTeamSize - The preferred team size (used for validation and future enhancements)
  * @returns Array of match templates with player assignments
  */
+/**
+ * Select players considering global rest across all matches
+ * @param players - List of players to select from
+ * @param teamId - Team identifier
+ * @param playersPerMatch - Number of players needed in the match
+ * @param restTracker - Global rest tracker for players
+ * @returns Selected players
+ */
+function selectPlayersWithGlobalRest(players: Player[], teamId: TeamId, playersPerMatch: number, restTracker: Map<string, number>): Player[] {
+  const availablePlayers: Player[] = [];
+  const restingPlayers: Player[] = [];
+
+  // Determine available and resting players
+  players.forEach(player => {
+    const playerId = player.id;
+    const consecutiveGames = restTracker.get(playerId) || 0;
+    if (consecutiveGames < 2) {
+      availablePlayers.push(player);
+    } else {
+      restingPlayers.push(player);
+    }
+  });
+
+  // If not enough available, use some resting players
+  if (availablePlayers.length < playersPerMatch) {
+    const needed = playersPerMatch - availablePlayers.length;
+    restingPlayers.sort((a, b) => (restTracker.get(a.id) || 0) - (restTracker.get(b.id) || 0));
+    availablePlayers.push(...restingPlayers.slice(0, needed));
+  }
+
+  // Sort available by least consecutive games first
+  availablePlayers.sort((a, b) => (restTracker.get(a.id) || 0) - (restTracker.get(b.id) || 0));
+
+  return availablePlayers.slice(0, playersPerMatch);
+}
+
+/**
+ * Update global rest tracker after matches
+ * @param participants - Participants in the match
+ * @param restTracker - Global rest tracker for players
+ */
+function updateGlobalPlayerRestTracker(participants: GeneratedParticipant[], restTracker: Map<string, number>) {
+  participants.forEach(participant => {
+    const playerId = participant.playerId;
+    const currentCount = restTracker.get(playerId) || 0;
+    restTracker.set(playerId, currentCount + 1);
+  });
+
+  // Reset rest counter if the player was resting
+  const allPlayerIds = Array.from(restTracker.keys());
+  allPlayerIds.forEach(playerId => {
+    if (!participants.some(p => p.playerId === playerId)) {
+      restTracker.set(playerId, 0);
+    }
+  });
+}
+
+
+
+
+
+
+
+
+/**
+ * Player with team identifier for scheduling
+ */
+interface ScheduledPlayer {
+  id: string;
+  first_name: string;
+  last_name: string;
+  teamId: TeamId;
+}
+
+/**
+ * Generate proper all-combinations schedule ensuring each player partners with teammates exactly twice
+ * @param teamA - Players from team A
+ * @param teamAId - Team A identifier
+ * @param teamB - Players from team B  
+ * @param teamBId - Team B identifier
+ * @param maxRounds - Maximum number of rounds to generate
+ * @returns Array of rounds, each containing array of matches (court assignments)
+ */
+function generateAllCombinationsSchedule(
+  teamA: Player[], 
+  teamAId: TeamId, 
+  teamB: Player[], 
+  teamBId: TeamId,
+  maxRounds: number
+): ScheduledPlayer[][][] {
+  // Convert players to scheduled players with team info
+  const scheduledTeamA: ScheduledPlayer[] = teamA.map(p => ({ ...p, teamId: teamAId }));
+  const scheduledTeamB: ScheduledPlayer[] = teamB.map(p => ({ ...p, teamId: teamBId }));
+  
+  // Generate all unique pair combinations for each team
+  const teamAPairs = generatePlayerCombinations(scheduledTeamA, 2);
+  const teamBPairs = generatePlayerCombinations(scheduledTeamB, 2);
+  
+  console.log(`🎾 All combinations scheduling:`, {
+    teamA: teamA.length,
+    teamB: teamB.length,
+    teamAPairs: teamAPairs.length,
+    teamBPairs: teamBPairs.length
+  });
+  
+  // Create complete match list: every Team A pair vs every Team B pair
+  const allMatches: { teamAPair: ScheduledPlayer[], teamBPair: ScheduledPlayer[] }[] = [];
+  
+  for (const teamAPair of teamAPairs) {
+    for (const teamBPair of teamBPairs) {
+      allMatches.push({ teamAPair, teamBPair });
+    }
+  }
+  
+  console.log(`🎾 Total possible matches: ${allMatches.length}`);
+  
+  // Track player consecutive games to prevent more than 2 in a row
+  const playerConsecutiveGames = new Map<string, number>();
+  [...scheduledTeamA, ...scheduledTeamB].forEach(player => {
+    playerConsecutiveGames.set(player.id, 0);
+  });
+  
+  const rounds: ScheduledPlayer[][][] = [];
+  const scheduledMatches = new Set<string>();
+  
+  let roundIndex = 0;
+  // Remove maxRounds constraint for all-combinations - we want to schedule ALL matches
+  while (scheduledMatches.size < allMatches.length) {
+    const roundMatches: ScheduledPlayer[][] = [];
+    const roundPlayers = new Set<string>();
+    
+    // Try to schedule up to 2 matches per round (2 courts)
+    for (let courtIndex = 0; courtIndex < 2 && roundMatches.length < 2; courtIndex++) {
+      let bestMatch = null;
+      let bestScore = -1000; // Start with very low score
+      
+      // Find the best available match for this court
+      for (const match of allMatches) {
+        const matchKey = `${match.teamAPair.map(p => p.id).sort().join(',')}vs${match.teamBPair.map(p => p.id).sort().join(',')}`;
+        
+        if (scheduledMatches.has(matchKey)) continue;
+        
+        const allMatchPlayers = [...match.teamAPair, ...match.teamBPair];
+        
+        // Check if any player is already scheduled in this round
+        if (allMatchPlayers.some(player => roundPlayers.has(player.id))) continue;
+        
+        // Check consecutive games constraint (max 2) - but allow if no other options
+        const hasPlayersAtLimit = allMatchPlayers.some(player => (playerConsecutiveGames.get(player.id) || 0) >= 2);
+        
+        // Calculate priority score (prioritize players who have played less)
+        const totalConsecutiveGames = allMatchPlayers.reduce((sum, player) => 
+          sum + (playerConsecutiveGames.get(player.id) || 0), 0
+        );
+        
+        let score = -totalConsecutiveGames; // Lower consecutive games = higher priority
+        
+        // Penalize matches with players at the limit, but don't exclude them entirely
+        if (hasPlayersAtLimit) {
+          score -= 100; // Heavy penalty but still allow
+        }
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = { match, matchKey };
+        }
+      }
+      
+      if (bestMatch) {
+        const { match, matchKey } = bestMatch;
+        const allMatchPlayers = [...match.teamAPair, ...match.teamBPair];
+        
+        roundMatches.push(allMatchPlayers);
+        scheduledMatches.add(matchKey);
+        
+        // Mark players as scheduled for this round
+        allMatchPlayers.forEach(player => roundPlayers.add(player.id));
+        
+        // Update consecutive games counter
+        allMatchPlayers.forEach(player => {
+          const current = playerConsecutiveGames.get(player.id) || 0;
+          playerConsecutiveGames.set(player.id, current + 1);
+        });
+        
+        console.log(`🎾 Round ${roundIndex + 1} Court ${courtIndex + 1}: ${match.teamAPair.map(p => p.first_name).join(' & ')} vs ${match.teamBPair.map(p => p.first_name).join(' & ')}`);
+      }
+    }
+    
+    if (roundMatches.length > 0) {
+      rounds.push(roundMatches);
+      
+      // Reset consecutive games for players not playing this round
+      const playingThisRound = new Set(roundMatches.flat().map(p => p.id));
+      playerConsecutiveGames.forEach((count, playerId) => {
+        if (!playingThisRound.has(playerId)) {
+          playerConsecutiveGames.set(playerId, 0);
+        }
+      });
+      
+      console.log(`🎾 Round ${roundIndex + 1} Complete: Scheduled ${roundMatches.length} matches, Total scheduled: ${scheduledMatches.size}/${allMatches.length}`);
+    } else {
+      // If we can't schedule any matches in this round, we need to reset some player counters
+      console.log(`🎾 Round ${roundIndex + 1}: No matches could be scheduled, forcing reset`);
+      
+      // Reset all players who have played 2+ consecutive games
+      let resetCount = 0;
+      playerConsecutiveGames.forEach((count, playerId) => {
+        if (count >= 2) {
+          playerConsecutiveGames.set(playerId, 0);
+          resetCount++;
+        }
+      });
+      
+      console.log(`🎾 Reset ${resetCount} players from consecutive game limits`);
+      
+      // If still no progress after reset, something is wrong
+      if (resetCount === 0) {
+        console.warn('⚠️ No matches could be scheduled and no players to reset - breaking loop');
+        break;
+      }
+    }
+    
+    roundIndex++;
+    
+    // Safety break to prevent infinite loops (much higher limit)
+    if (roundIndex > allMatches.length * 3) {
+      console.warn('⚠️ Breaking out of scheduling loop - may not have scheduled all matches');
+      break;
+    }
+  }
+  
+  // Log final scheduling statistics
+  console.log('🎾 Final All-Combinations Schedule:', {
+    totalRounds: rounds.length,
+    totalMatchesScheduled: scheduledMatches.size,
+    totalPossibleMatches: allMatches.length,
+    completionRate: `${Math.round(scheduledMatches.size / allMatches.length * 100)}%`
+  });
+  
+  return rounds;
+}
+
+/**
+ * Generate all unique combinations of players for a team
+ * @param players - Array of players from a team
+ * @param size - Number of players to select for each combination
+ * @returns Array of all unique player combinations
+ */
+function generatePlayerCombinations<T>(players: T[], size: number): T[][] {
+  if (size > players.length || size <= 0) return [];
+  if (size === 1) return players.map(p => [p]);
+  
+  const combinations: T[][] = [];
+  
+  function backtrack(start: number, current: T[]) {
+    if (current.length === size) {
+      combinations.push([...current]);
+      return;
+    }
+    
+    for (let i = start; i < players.length; i++) {
+      current.push(players[i]);
+      backtrack(i + 1, current);
+      current.pop();
+    }
+  }
+  
+  backtrack(0, []);
+  return combinations;
+}
+
 export function generateRoundRobinWithPlayers(
   teamPlayerMap: Map<TeamId, Player[]>,
-  preferredTeamSize: number
+  preferredTeamSize: number,
+  rotationOptions?: PlayerRotationOptions
 ): MatchTemplate[] {
   console.log('🎯 [DATA FLOW] generateRoundRobinWithPlayers called with:', {
     teamPlayerMapSize: teamPlayerMap.size,
     preferredTeamSize,
+    rotationOptions,
     teamIds: Array.from(teamPlayerMap.keys()),
     teamSizes: Array.from(teamPlayerMap.values()).map(team => team.length)
   })
   const matches: MatchTemplate[] = [];
   const teamIds = Array.from(teamPlayerMap.keys());
   let matchIndex = 0;
+  
+  // Create global player rest tracker for all teams
+  const globalPlayerRestTracker = new Map<string, number>(); // playerId -> consecutive games count
+  
+  // Initialize tracker for all players
+  teamPlayerMap.forEach((players, teamId) => {
+    players.forEach(player => {
+      globalPlayerRestTracker.set(player.id, 0);
+    });
+  });
 
   // Generate all possible pairings between teams
   for (let i = 0; i < teamIds.length; i++) {
@@ -809,54 +1276,136 @@ export function generateRoundRobinWithPlayers(
       const playersPerMatch = Math.min(2, minPlayersPerTeam); // 2 players per team for doubles
       
       if (minPlayersPerTeam >= 1) {
-        // Calculate how many different matches we can create between these teams
-        const maxMatches = Math.floor(Math.min(teamA.length, teamB.length) / playersPerMatch);
+        const rotationType = rotationOptions?.playerRotation || 'head-to-head';
+        const numberOfRounds = rotationOptions?.numberOfRounds || 1;
         
-        // Create multiple matches with different player combinations
-        for (let matchRound = 0; matchRound < maxMatches; matchRound++) {
-          const participants: GeneratedParticipant[] = [];
+        if (rotationType === 'all-combinations') {
+          // Generate all unique combinations for doubles (2 players per team)
+          const teamACombinations = generatePlayerCombinations(teamA, playersPerMatch);
+          const teamBCombinations = generatePlayerCombinations(teamB, playersPerMatch);
           
-          // Add players from Team A (rotate through different players)
-          for (let k = 0; k < playersPerMatch; k++) {
-            const playerIndex = (matchRound * playersPerMatch + k) % teamA.length;
-            participants.push({
-              playerId: teamA[playerIndex].id,
-              team: teamAId
-            });
-          }
+          // To ensure each player plays with teammates exactly twice, we need to duplicate combinations
+          const teamAExpandedCombinations = [...teamACombinations, ...teamACombinations];
+          const teamBExpandedCombinations = [...teamBCombinations, ...teamBCombinations];
           
-          // Add players from Team B (rotate through different players)
-          for (let k = 0; k < playersPerMatch; k++) {
-            const playerIndex = (matchRound * playersPerMatch + k) % teamB.length;
-            participants.push({
-              playerId: teamB[playerIndex].id,
-              team: teamBId
-            });
-          }
-          
-          const matchType = playersPerMatch === 1 ? 'Singles' : 'Doubles';
-          const maxPlayers = playersPerMatch * 2; // Team A players + Team B players
-          const matchNumber = matchRound + 1;
-          
-          matches.push({
-            id: `rr-match-${matchIndex}`,
-            title: `Team ${teamAId} vs Team ${teamBId} - Match ${matchNumber}`,
-            match_type: matchType,
-            skill_level: 'Mixed',
-            court_id: '',
-            date: '',
-            time: '',
-            duration_minutes: 90,
-            max_players: maxPlayers,
-            description: `Round Robin: Team ${teamAId} vs Team ${teamBId} - Match ${matchNumber}`,
-            notes: 'Round Robin tournament match with player rotation',
-            participants
+          console.log(`🔄 All combinations for Round Robin ${teamAId} vs ${teamBId}:`, {
+            teamASize: teamA.length,
+            teamBSize: teamB.length,
+            teamACombinations: teamACombinations.length,
+            teamBCombinations: teamBCombinations.length,
+            teamAExpandedCombinations: teamAExpandedCombinations.length,
+            teamBExpandedCombinations: teamBExpandedCombinations.length,
+            playersPerMatch
           });
-          matchIndex++;
+          
+          // Create matches for all combination pairs, respecting numberOfRounds limit
+          const maxMatches = Math.min(
+            teamAExpandedCombinations.length,
+            teamBExpandedCombinations.length,
+            numberOfRounds
+          );
+          
+          for (let comboIndex = 0; comboIndex < maxMatches; comboIndex++) {
+            const participants: GeneratedParticipant[] = [];
+            
+            // Add players from Team A combination
+            teamAExpandedCombinations[comboIndex].forEach(player => {
+              participants.push({
+                playerId: player.id,
+                team: teamAId
+              });
+            });
+            
+            // Add players from Team B combination
+            teamBExpandedCombinations[comboIndex].forEach(player => {
+              participants.push({
+                playerId: player.id,
+                team: teamBId
+              });
+            });
+            
+            const matchType = playersPerMatch === 1 ? 'Singles' : 'Doubles';
+            const maxPlayers = playersPerMatch * 2;
+            const matchNumber = comboIndex + 1;
+            
+            matches.push({
+              id: `rr-match-${matchIndex}`,
+              title: `Team ${teamAId} vs Team ${teamBId} - Match ${matchNumber}`,
+              match_type: matchType,
+              skill_level: 'Mixed',
+              court_id: '',
+              date: '',
+              time: '',
+              duration_minutes: 90,
+              max_players: maxPlayers,
+              description: `Round Robin: Team ${teamAId} vs Team ${teamBId} - Match ${matchNumber} (All Combinations)`,
+              notes: 'Round Robin tournament match with all player combinations for balanced play',
+              participants
+            });
+            matchIndex++;
+            
+            // Update global rest tracker
+            updateGlobalPlayerRestTracker(participants, globalPlayerRestTracker);
+          }
+        } else {
+          // Default head-to-head rotation with global player rest enforcement
+          for (let matchRound = 0; matchRound < numberOfRounds; matchRound++) {
+            const participants: GeneratedParticipant[] = [];
+            
+            // Select players from Team A considering global rest
+            const teamASelectedPlayers = selectPlayersWithGlobalRest(teamA, teamAId, playersPerMatch, globalPlayerRestTracker);
+            teamASelectedPlayers.forEach(player => {
+              participants.push({ playerId: player.id, team: teamAId });
+            });
+            
+            // Select players from Team B considering global rest
+            const teamBSelectedPlayers = selectPlayersWithGlobalRest(teamB, teamBId, playersPerMatch, globalPlayerRestTracker);
+            teamBSelectedPlayers.forEach(player => {
+              participants.push({ playerId: player.id, team: teamBId });
+            });
+            
+            const matchType = playersPerMatch === 1 ? 'Singles' : 'Doubles';
+            const maxPlayers = playersPerMatch * 2;
+            const matchNumber = matchRound + 1;
+            
+            // Only create match if we have enough players
+            if (participants.length === playersPerMatch * 2) {
+              matches.push({
+                id: `rr-match-${matchIndex}`,
+                title: `Team ${teamAId} vs Team ${teamBId} - Match ${matchNumber}`,
+                match_type: matchType,
+                skill_level: 'Mixed',
+                court_id: '',
+                date: '',
+                time: '',
+                duration_minutes: 90,
+                max_players: maxPlayers,
+                description: `Round Robin: Team ${teamAId} vs Team ${teamBId} - Match ${matchNumber} (Head-to-Head)`,
+                notes: 'Round Robin tournament match with global player rotation',
+                participants
+              });
+              matchIndex++;
+              
+              // Update global rest tracker
+              updateGlobalPlayerRestTracker(participants, globalPlayerRestTracker);
+            }
+          }
         }
       }
     }
   }
+  
+  // Log final player game counts
+  console.log('🔄 Final player consecutive game counts (Round Robin):', 
+    Array.from(globalPlayerRestTracker.entries()).reduce((acc, [playerId, count]) => {
+      const player = Array.from(teamPlayerMap.values()).flat().find(p => p.id === playerId);
+      if (player) {
+        acc[`${player.first_name} ${player.last_name}`] = count;
+      }
+      return acc;
+    }, {} as Record<string, number>)
+  );
+  
   console.log('🎯 [DATA FLOW] generateRoundRobinWithPlayers result:', {
     matchesCount: matches.length,
     matches: matches.map(m => ({ id: m.id, title: m.title, participantsCount: m.participants.length, max_players: m.max_players }))

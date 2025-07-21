@@ -43,6 +43,63 @@ interface GenerationSettings {
   includeNewMembers: boolean
 }
 
+// Local storage key for saved settings
+const SETTINGS_STORAGE_KEY = 'matchGenerationSettings'
+
+// Default settings
+const DEFAULT_SETTINGS = {
+  startTime: '09:00',
+  endTime: '17:00',
+  matchDuration: 90,
+  includeBreaks: true,
+  breakBetweenMatches: 15,
+  scoringSystem: 'duration' as 'duration' | 'points',
+  pointsToWin: 21,
+  teamSize: 4,
+  teamCountPreference: 'auto' as 'auto' | 'odd' | 'even',
+  teamFormat: 'round-robin' as 'round-robin' | 'team-vs-team',
+  playerRotation: 'head-to-head' as 'head-to-head' | 'all-combinations',
+  numberOfRounds: 1,
+  generationSettings: {
+    balanceSkills: true,
+    allowMixedSkills: true,
+    preferSimilarRatings: false,
+    maxSkillDifference: 2,
+    prioritizeActiveMembers: true,
+    includeNewMembers: true
+  }
+}
+
+// Load settings from localStorage
+const loadSavedSettings = () => {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS
+  
+  try {
+    const saved = localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (saved) {
+      const parsedSettings = JSON.parse(saved)
+      // Merge with defaults to ensure all properties exist
+      return { ...DEFAULT_SETTINGS, ...parsedSettings }
+    }
+  } catch (error) {
+    console.warn('Failed to load saved match generation settings:', error)
+  }
+  
+  return DEFAULT_SETTINGS
+}
+
+// Save settings to localStorage
+const saveSettings = (settings: typeof DEFAULT_SETTINGS) => {
+  if (typeof window === 'undefined') return
+  
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+    console.log('💾 Match generation settings saved')
+  } catch (error) {
+    console.warn('Failed to save match generation settings:', error)
+  }
+}
+
 export default function GenerateMatchesPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -50,39 +107,47 @@ export default function GenerateMatchesPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [availablePlayers, setAvailablePlayers] = useState<string[]>([])
   const [matchTemplates, setMatchTemplates] = useState<MatchTemplate[]>([])
-  const [generationSettings, setGenerationSettings] = useState<GenerationSettings>({
-    balanceSkills: true,
-    allowMixedSkills: true,
-    preferSimilarRatings: false,
-    maxSkillDifference: 2,
-    prioritizeActiveMembers: true,
-    includeNewMembers: true
-  })
+  
+  // Load saved settings or use defaults
+  const savedSettings = loadSavedSettings()
+  const [generationSettings, setGenerationSettings] = useState<GenerationSettings>(savedSettings.generationSettings)
   
   const [activeTab, setActiveTab] = useState('single')
   const [selectedDate, setSelectedDate] = useState('')
-  const [startTime, setStartTime] = useState('09:00')
-  const [endTime, setEndTime] = useState('17:00')
-  const [matchDuration, setMatchDuration] = useState(90)
-  const [breakBetweenMatches] = useState(15)
-  const [scoringSystem, setScoringSystem] = useState<'duration' | 'points'>('duration')
-  const [pointsToWin, setPointsToWin] = useState(21)
-  const [teamSize, setTeamSize] = useState(4)
-  const [teamCountPreference, setTeamCountPreference] = useState<'auto' | 'odd' | 'even'>('auto')
-  const [teamFormat, setTeamFormat] = useState<'round-robin' | 'team-vs-team'>('round-robin')
+  const [startTime, setStartTime] = useState(savedSettings.startTime)
+  const [endTime, setEndTime] = useState(savedSettings.endTime)
+  const [matchDuration, setMatchDuration] = useState(savedSettings.matchDuration)
+  const [includeBreaks, setIncludeBreaks] = useState(savedSettings.includeBreaks)
+  const [breakBetweenMatches, setBreakBetweenMatches] = useState(savedSettings.breakBetweenMatches)
+  const [scoringSystem, setScoringSystem] = useState<'duration' | 'points'>(savedSettings.scoringSystem)
+  const [pointsToWin, setPointsToWin] = useState(savedSettings.pointsToWin)
+  const [teamSize, setTeamSize] = useState(savedSettings.teamSize)
+  const [teamCountPreference, setTeamCountPreference] = useState<'auto' | 'odd' | 'even'>(savedSettings.teamCountPreference)
+  const [teamFormat, setTeamFormat] = useState<'round-robin' | 'team-vs-team'>(savedSettings.teamFormat)
+  const [playerRotation, setPlayerRotation] = useState<'head-to-head' | 'all-combinations'>(savedSettings.playerRotation)
+  const [numberOfRounds, setNumberOfRounds] = useState(savedSettings.numberOfRounds)
   const [selectedCourts, setSelectedCourts] = useState<string[]>([])
   
-  // Console log when teamSize state changes
   useEffect(() => {
     console.log('🎯 [DATA FLOW] teamSize state changed:', teamSize)
+    saveCurrentSettings()
   }, [teamSize])
   
-  // Console log when teamCountPreference state changes
   useEffect(() => {
     console.log('🎯 [DATA FLOW] teamCountPreference state changed:', teamCountPreference)
+    saveCurrentSettings()
   }, [teamCountPreference])
+  
+  // Auto-save settings when any configuration changes
+  useEffect(() => {
+    saveCurrentSettings()
+  }, [startTime, endTime, matchDuration, includeBreaks, breakBetweenMatches, scoringSystem, pointsToWin, teamFormat, playerRotation, numberOfRounds])
+  
+  // Auto-save generation settings when they change
+  useEffect(() => {
+    saveCurrentSettings()
+  }, [generationSettings])
 
-  // Single match form data
   const [singleMatchData, setSingleMatchData] = useState<CreateMatchData>({
     title: '',
     match_type: 'Doubles',
@@ -98,13 +163,17 @@ export default function GenerateMatchesPage() {
 
   useEffect(() => {
     loadInitialData()
-    // Set default date to today
     const today = new Date().toISOString().split('T')[0]
     setSelectedDate(today)
     setSingleMatchData(prev => ({ ...prev, date: today }))
+    
+    // Show a subtle indication that saved settings were loaded
+    const savedSettings = loadSavedSettings()
+    if (localStorage.getItem(SETTINGS_STORAGE_KEY)) {
+      console.log('📋 Loaded saved match generation settings')
+    }
   }, [])
 
-  // Update max_players when teamSize changes
   useEffect(() => {
     setSingleMatchData(prev => ({ ...prev, max_players: teamSize * 2 }))
   }, [teamSize])
@@ -119,7 +188,6 @@ export default function GenerateMatchesPage() {
       setCourts(courtsData)
       setPlayers(playersData)
       setAvailablePlayers(playersData.map(p => p.id))
-      // Initialize all courts as selected by default
       setSelectedCourts(courtsData.map(c => c.id))
     } catch (error) {
       console.error('Failed to load initial data:', error)
@@ -138,10 +206,10 @@ export default function GenerateMatchesPage() {
       date: selectedDate,
       time: startTime,
       duration_minutes: matchDuration,
-      max_players: teamSize * 2, // Compute max_players based on teamSize
+      max_players: teamSize * 2,
       description: '',
       notes: '',
-      participants: [] // Will be populated with team assignments when players are added
+      participants: []
     }
     setMatchTemplates([...matchTemplates, newTemplate])
   }
@@ -169,80 +237,7 @@ export default function GenerateMatchesPage() {
     return slots
   }
 
-  const generateBalancedMatches = (params?: { preferredTeamSize?: number }) => {
-    const preferredTeamSize = params?.preferredTeamSize || teamSize
-    const timeSlots = generateTimeSlots()
-    const availablePlayersList = players.filter(p => availablePlayers.includes(p.id))
-    
-    const optimal = calculateOptimalTeamSizes(availablePlayersList.length, preferredTeamSize)
-    const playersNeeded = optimal.teamSize * 2
-    
-    if (availablePlayersList.length < playersNeeded) {
-      alert(`Need at least ${playersNeeded} players to generate matches`)
-      return
-    }
-
-    // Group players by skill level if balance skills is enabled
-    // const playersBySkill = generationSettings.balanceSkills 
-    //   ? groupPlayersBySkill(availablePlayersList)
-    //   : { Mixed: availablePlayersList }
-
-    const newTemplates: MatchTemplate[] = []
-    let playerPool = [...availablePlayersList]
-
-    const availableCourts = courts.filter(court => selectedCourts.includes(court.id))
-    
-    timeSlots.forEach((timeSlot, slotIndex) => {
-      availableCourts.forEach((court, courtIndex) => {
-if (playerPool.length >= playersNeeded) {
-          const matchPlayers = selectPlayersForMatch(playerPool, playersNeeded)
-          if (matchPlayers.length >= playersNeeded) {
-            // Assign teams based on dynamic teamIds
-            console.log('🎯 [DATA FLOW] About to call buildParticipantsForMatch (generateBalancedMatches) with:', {
-              matchPlayersCount: matchPlayers.length,
-              teamSizeArg: optimal.teamSize,
-              originalTeamSize: teamSize
-            })
-            const { participants } = buildParticipantsForMatch(matchPlayers, optimal.teamSize)
-            
-            const template: MatchTemplate = {
-              id: `${slotIndex}-${courtIndex}-${Date.now()}`,
-              title: `${timeSlot} - ${court.name}`,
-              match_type: 'Doubles',
-              skill_level: determineBestSkillLevel(participants),
-court_id: court.id,
-              date: selectedDate,
-              time: timeSlot,
-              duration_minutes: matchDuration,
-              max_players: playersNeeded,
-              description: `Auto-generated match for ${timeSlot}`,
-              notes: `Generated using intelligent player matching${scoringSystem === 'points' ? ` • First to ${pointsToWin} points` : ''}`,
-              participants
-            }
-            newTemplates.push(template)
-            
-// Remove selected players from pool (based on actual participants)
-            const usedPlayerIds = participants.map(p => p.playerId)
-            playerPool = playerPool.filter(p => !usedPlayerIds.includes(p.id))
-          }
-        }
-      })
-    })
-
-    setMatchTemplates(newTemplates)
-  }
-
-  // Unused for now - keeping for reference
-  // const groupPlayersBySkill = (playersList: Player[]) => {
-  //   return playersList.reduce((groups, player) => {
-  //     const skill = player.skill_level || 'Mixed'
-  //     if (!groups[skill]) groups[skill] = []
-  //     groups[skill].push(player)
-  //     return groups
-  //   }, {} as Record<string, Player[]>)
-  // }
-
-const selectPlayersForMatch = (playerPool: Player[], count: number = 4) => {
+  const selectPlayersForMatch = (playerPool: Player[], count: number = 4) => {
     if (!generationSettings.balanceSkills) {
       return playerPool.slice(0, count)
     }
@@ -266,6 +261,187 @@ const selectPlayersForMatch = (playerPool: Player[], count: number = 4) => {
       .sort(([,a], [,b]) => b - a)[0]?.[0]
     
     return mostCommon || 'Mixed'
+  }
+
+  const calculateOptimalMix = (totalPlayers: number) => {
+    // Logic to determine optimal mix of doubles and singles matches
+    if (totalPlayers < 4) {
+      return { doublesMatches: 0, singlesMatches: Math.floor(totalPlayers / 2) }
+    }
+    
+    // For your example: 10 players = 2 doubles (8 players) + 1 singles (2 players)
+    if (totalPlayers >= 10) {
+      const doublesMatches = Math.floor(totalPlayers * 0.8 / 4) // 80% in doubles
+      const remainingPlayers = totalPlayers - (doublesMatches * 4)
+      const singlesMatches = Math.floor(remainingPlayers / 2)
+      return { doublesMatches, singlesMatches }
+    }
+    
+    // For smaller groups, prioritize doubles
+    if (totalPlayers >= 8) {
+      return { doublesMatches: 1, singlesMatches: Math.floor((totalPlayers - 4) / 2) }
+    }
+    
+    if (totalPlayers >= 6) {
+      return { doublesMatches: 1, singlesMatches: 1 }
+    }
+    
+    // For 4-5 players, just one doubles match
+    return { doublesMatches: 1, singlesMatches: 0 }
+  }
+
+  const sortPlayersBySkill = (playersList: Player[]) => {
+    const skillOrder = { 'Professional': 5, 'Advanced': 4, 'Intermediate': 3, 'Beginner': 2, '': 1 }
+    return [...playersList].sort((a, b) => {
+      const skillA = skillOrder[a.skill_level as keyof typeof skillOrder] || 1
+      const skillB = skillOrder[b.skill_level as keyof typeof skillOrder] || 1
+      return skillB - skillA // Higher skill first
+    })
+  }
+
+  const createBalancedTeams = (sortedPlayers: Player[], preferredTeamSize?: number) => {
+    const teams: Player[][] = []
+    const totalPlayers = sortedPlayers.length
+    const teamSizeToUse = preferredTeamSize || teamSize
+    
+    // For team matches, we need equal-sized teams to ensure fair matches
+    // Calculate how many complete teams we can make with the preferred size
+    const completeTeamsCount = Math.floor(totalPlayers / teamSizeToUse)
+    const remainingPlayers = totalPlayers % teamSizeToUse
+    
+    // We need at least 2 teams for matches
+    if (completeTeamsCount < 2) {
+      // Try to create 2 teams by adjusting team size
+      if (totalPlayers >= 6) { // Minimum 3 players per team
+        const adjustedTeamSize = Math.floor(totalPlayers / 2)
+        const remainder = totalPlayers % 2
+        
+        // Create 2 teams with as equal sizes as possible
+        teams.push([])
+        teams.push([])
+        
+        // Distribute players evenly
+        for (let i = 0; i < totalPlayers; i++) {
+          const teamIndex = i < adjustedTeamSize + remainder ? 0 : 1
+          teams[teamIndex].push(sortedPlayers[i])
+        }
+      }
+      return teams
+    }
+    
+    // Initialize teams with equal sizes
+    for (let i = 0; i < completeTeamsCount; i++) {
+      teams.push([])
+    }
+    
+    // Distribute players using round-robin for skill balance
+    // First, distribute players to make complete equal-sized teams
+    let playerIndex = 0
+    for (let round = 0; round < teamSizeToUse; round++) {
+      for (let teamIndex = 0; teamIndex < completeTeamsCount && playerIndex < totalPlayers; teamIndex++) {
+        teams[teamIndex].push(sortedPlayers[playerIndex])
+        playerIndex++
+      }
+    }
+    
+    // Handle remaining players by distributing them evenly across teams
+    // This ensures teams remain as equal as possible in size
+    let teamIndex = 0
+    while (playerIndex < totalPlayers) {
+      teams[teamIndex].push(sortedPlayers[playerIndex])
+      playerIndex++
+      teamIndex = (teamIndex + 1) % teams.length
+    }
+    
+    console.log('🎯 [TEAM CREATION] Created balanced teams:', {
+      totalPlayers,
+      teamSizeToUse,
+      teamsCreated: teams.length,
+      teamSizes: teams.map(t => t.length),
+      teams: teams.map((team, idx) => ({
+        teamIndex: idx,
+        size: team.length,
+        players: team.map(p => `${p.first_name} ${p.last_name}`)
+      }))
+    })
+    
+    return teams
+  }
+
+  const enhanceMatchesWithTimeAndCourt = (matches: MatchTemplate[]): MatchTemplate[] => {
+    const timeSlots = generateTimeSlots()
+    const availableCourts = courts.filter(court => selectedCourts.includes(court.id))
+    let courtIndex = 0
+    
+    return matches.map((match, index) => {
+      // Assign time and court
+      const timeSlot = timeSlots[Math.floor(index / availableCourts.length)] || startTime
+      const court = availableCourts[courtIndex % availableCourts.length]
+      
+      if (court) {
+        courtIndex++
+        return {
+          ...match,
+          id: `team-match-${index}`,
+          court_id: court.id,
+          date: selectedDate,
+          time: timeSlot
+        }
+      }
+      
+      return match
+    })
+  }
+
+  const generateBalancedMatches = (params?: { preferredTeamSize?: number }) => {
+    const preferredTeamSize = params?.preferredTeamSize || teamSize
+    const timeSlots = generateTimeSlots()
+    const availablePlayersList = players.filter(p => availablePlayers.includes(p.id))
+    
+    const optimal = calculateOptimalTeamSizes(availablePlayersList.length, preferredTeamSize)
+    const playersNeeded = optimal.teamSize * 2
+    
+    if (availablePlayersList.length < playersNeeded) {
+      alert(`Need at least ${playersNeeded} players to generate matches`)
+      return
+    }
+
+    const newTemplates: MatchTemplate[] = []
+    let playerPool = [...availablePlayersList]
+
+    const availableCourts = courts.filter(court => selectedCourts.includes(court.id))
+    
+    timeSlots.forEach((timeSlot, slotIndex) => {
+      availableCourts.forEach((court, courtIndex) => {
+        if (playerPool.length >= playersNeeded) {
+          const matchPlayers = selectPlayersForMatch(playerPool, playersNeeded)
+          if (matchPlayers.length >= playersNeeded) {
+            const { participants } = buildParticipantsForMatch(matchPlayers, optimal.teamSize)
+            
+            const template: MatchTemplate = {
+              id: `${slotIndex}-${courtIndex}-${Date.now()}`,
+              title: `${timeSlot} - ${court.name}`,
+              match_type: 'Doubles',
+              skill_level: determineBestSkillLevel(participants),
+              court_id: court.id,
+              date: selectedDate,
+              time: timeSlot,
+              duration_minutes: matchDuration,
+              max_players: playersNeeded,
+              description: `Auto-generated match for ${timeSlot}`,
+              notes: `Generated using intelligent player matching${scoringSystem === 'points' ? ` • First to ${pointsToWin} points` : ''}`,
+              participants
+            }
+            newTemplates.push(template)
+            
+            const usedPlayerIds = participants.map(p => p.playerId)
+            playerPool = playerPool.filter(p => !usedPlayerIds.includes(p.id))
+          }
+        }
+      })
+    })
+
+    setMatchTemplates(newTemplates)
   }
 
   const generateMixedFormat = (params?: { preferredTeamSize?: number }) => {
@@ -298,11 +474,6 @@ const selectPlayersForMatch = (playerPool: Player[], count: number = 4) => {
       
       if (court) {
         const matchPlayers = playerPool.splice(0, 4) // Take first 4 players
-        // Assign teams for doubles based on dynamic teamIds
-        console.log('🎯 [DATA FLOW] About to call buildParticipantsForMatch (generateMixedFormat) with:', {
-          matchPlayersCount: matchPlayers.length,
-          teamSizeArg: 2
-        })
         const { participants } = buildParticipantsForMatch(matchPlayers, 2)
         
         const template: MatchTemplate = {
@@ -331,8 +502,7 @@ const selectPlayersForMatch = (playerPool: Player[], count: number = 4) => {
       
       if (court) {
         const matchPlayers = playerPool.splice(0, 2) // Take first 2 players
-        // Assign teams for singles based on dynamic teamIds
-const { participants } = buildParticipantsForMatch(matchPlayers, 2)
+        const { participants } = buildParticipantsForMatch(matchPlayers, 1)
         
         const template: MatchTemplate = {
           id: `mixed-s-${i}-${Date.now()}`,
@@ -353,101 +523,11 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 2)
       }
     }
 
-    // Handle any remaining players with additional matches
-    if (playerPool.length >= 4) {
-      // Create another doubles match if 4+ players remain
-      const timeSlot = timeSlots[Math.floor(matchIndex / availableCourts.length)] || startTime
-      const court = availableCourts[matchIndex % availableCourts.length]
-      
-      if (court) {
-        const matchPlayers = playerPool.splice(0, 4)
-        // Assign teams for extra doubles based on dynamic teamIds
-        const { participants } = buildParticipantsForMatch(matchPlayers, 2)
-        
-        const template: MatchTemplate = {
-          id: `mixed-extra-d-${Date.now()}`,
-          title: `Extra Doubles Match`,
-          match_type: 'Doubles',
-          skill_level: determineBestSkillLevel(participants),
-          court_id: court.id,
-          date: selectedDate,
-          time: timeSlot,
-          duration_minutes: matchDuration,
-          max_players: 4,
-          description: 'Mixed format - Extra doubles for remaining players',
-          notes: 'Part of mixed format generation',
-          participants
-        }
-        newTemplates.push(template)
-        matchIndex++
-      }
-    } else if (playerPool.length >= 2) {
-      // Create a singles match if 2-3 players remain
-      const timeSlot = timeSlots[Math.floor(matchIndex / availableCourts.length)] || startTime
-      const court = availableCourts[matchIndex % availableCourts.length]
-      
-      if (court) {
-        const matchPlayers = playerPool.splice(0, 2)
-        // Assign teams for extra singles based on dynamic teamIds
-const { participants } = buildParticipantsForMatch(matchPlayers, 1)
-        
-        const template: MatchTemplate = {
-          id: `mixed-extra-s-${Date.now()}`,
-          title: `Extra Singles Match`,
-          match_type: 'Singles',
-          skill_level: determineBestSkillLevel(participants),
-          court_id: court.id,
-          date: selectedDate,
-          time: timeSlot,
-          duration_minutes: matchDuration,
-          max_players: 2,
-          description: 'Mixed format - Extra singles for remaining players',
-          notes: 'Part of mixed format generation',
-          participants
-        }
-        newTemplates.push(template)
-      }
-    }
-
     setMatchTemplates(newTemplates)
   }
 
-  const calculateOptimalMix = (totalPlayers: number) => {
-    // Logic to determine optimal mix of doubles and singles matches
-    if (totalPlayers < 4) {
-      return { doublesMatches: 0, singlesMatches: Math.floor(totalPlayers / 2) }
-    }
-    
-    // For your example: 10 players = 2 doubles (8 players) + 1 singles (2 players)
-    if (totalPlayers >= 10) {
-      const doublesMatches = Math.floor(totalPlayers * 0.8 / 4) // 80% in doubles
-      const remainingPlayers = totalPlayers - (doublesMatches * 4)
-      const singlesMatches = Math.floor(remainingPlayers / 2)
-      return { doublesMatches, singlesMatches }
-    }
-    
-    // For smaller groups, prioritize doubles
-    if (totalPlayers >= 8) {
-      return { doublesMatches: 1, singlesMatches: Math.floor((totalPlayers - 4) / 2) }
-    }
-    
-    if (totalPlayers >= 6) {
-      return { doublesMatches: 1, singlesMatches: 1 }
-    }
-    
-    // For 4-5 players, just one doubles match
-    return { doublesMatches: 1, singlesMatches: 0 }
-  }
-
-
   const generateTeamMatches = (params?: { preferredTeamSize?: number }) => {
     const preferredTeamSize = params?.preferredTeamSize || teamSize
-    console.log('🎯 [DATA FLOW] generateTeamMatches called with:', {
-      params,
-      preferredTeamSize,
-      teamSize: teamSize,
-      availablePlayersCount: players.filter(p => availablePlayers.includes(p.id)).length
-    })
     const availablePlayersList = players.filter(p => availablePlayers.includes(p.id))
     
     if (availablePlayersList.length < 6) {
@@ -457,12 +537,7 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
 
     // Sort players by skill level for better team balancing
     const sortedPlayers = sortPlayersBySkill(availablePlayersList)
-    console.log('🎯 [DATA FLOW] About to call createBalancedTeams with preferredTeamSize:', preferredTeamSize)
     const teams = createBalancedTeams(sortedPlayers, preferredTeamSize)
-    console.log('🎯 [DATA FLOW] createBalancedTeams returned:', {
-      teamsCount: teams.length,
-      teamSizes: teams.map(team => team.length)
-    })
     
     if (teams.length < 2) {
       alert('Not enough players to create balanced teams')
@@ -479,228 +554,60 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
       teamPlayerMap.set(teamIds[i], teams[i])
     }
 
+    // Calculate optimal number of rounds based on available time slots
+    const timeSlots = generateTimeSlots()
+    const availableCourts = courts.filter(court => selectedCourts.includes(court.id))
+    const totalTimeSlots = timeSlots.length * availableCourts.length
+    
+    // Calculate base matches needed (one round of team matchups)
+    let baseMatchesNeeded = 0
+    if (teamFormat === 'team-vs-team') {
+      // Team vs Team: pairs of teams play against each other
+      baseMatchesNeeded = Math.floor(teams.length / 2)
+    } else {
+      // Round Robin: all possible team pairings
+      baseMatchesNeeded = (teams.length * (teams.length - 1)) / 2
+    }
+    
+    // Calculate how many rounds we can fit in the available time slots
+    const optimalRounds = baseMatchesNeeded > 0 ? Math.max(1, Math.floor(totalTimeSlots / baseMatchesNeeded)) : numberOfRounds
+    
+    console.log('🎯 [ROUNDS CALCULATION]:', {
+      timeSlots: timeSlots.length,
+      availableCourts: availableCourts.length,
+      totalTimeSlots,
+      baseMatchesNeeded,
+      requestedRounds: numberOfRounds,
+      optimalRounds
+    })
+    
     // 4. Generate matches based on selected team format
     let matches: MatchTemplate[]
     if (teamFormat === 'team-vs-team') {
-      console.log('🎯 [DATA FLOW] About to call generateTeamVsTeamMatches with:', {
-        teamPlayerMapSize: teamPlayerMap.size,
-        preferredTeamSize: preferredTeamSize
-      })
-      matches = generateTeamVsTeamMatches(teamPlayerMap, preferredTeamSize)
+      matches = generateTeamVsTeamMatches(
+        teamPlayerMap, 
+        preferredTeamSize,
+        {
+          playerRotation: playerRotation,
+          numberOfRounds: optimalRounds
+        }
+      )
     } else {
-      console.log('🎯 [DATA FLOW] About to call generateRoundRobinWithPlayers with:', {
-        teamPlayerMapSize: teamPlayerMap.size,
-        preferredTeamSize: preferredTeamSize
-      })
-      matches = generateRoundRobinWithPlayers(teamPlayerMap, preferredTeamSize)
+      matches = generateRoundRobinWithPlayers(
+        teamPlayerMap, 
+        preferredTeamSize,
+        {
+          playerRotation: playerRotation,
+          numberOfRounds: optimalRounds
+        }
+      )
     }
-    console.log('🎯 [DATA FLOW] Match generation returned:', {
-      matchesCount: matches.length
-    })
     
     // 4. Enhance the matches with time slots and court assignments
     const enhancedMatches = enhanceMatchesWithTimeAndCourt(matches)
     
     setMatchTemplates(enhancedMatches)
   }
-
-  const enhanceMatchesWithTimeAndCourt = (matches: MatchTemplate[]): MatchTemplate[] => {
-    const timeSlots = generateTimeSlots()
-    const availableCourts = courts.filter(court => selectedCourts.includes(court.id))
-    let courtIndex = 0
-    
-    return matches.map((match, index) => {
-      // Assign time and court
-      const timeSlot = timeSlots[Math.floor(index / availableCourts.length)] || startTime
-      const court = availableCourts[courtIndex % availableCourts.length]
-      
-      if (court) {
-        courtIndex++
-        return {
-          ...match,
-          id: `team-match-${index}`,
-          court_id: court.id,
-          date: selectedDate,
-          time: timeSlot
-        }
-      }
-      
-      return match
-    })
-  }
-
-  // Unused function - keeping for reference
-  /*
-  const generateRoundRobinMatches = (teamPlayerMap: Map<TeamId, Player[]>, teamIds: TeamId[]): MatchTemplate[] => {
-    const timeSlots = generateTimeSlots()
-    const newTemplates: MatchTemplate[] = []
-    let matchIndex = 0
-
-    // Generate full round-robin between all teams
-    for (let teamAIndex = 0; teamAIndex < teamIds.length - 1; teamAIndex++) {
-      for (let teamBIndex = teamAIndex + 1; teamBIndex < teamIds.length; teamBIndex++) {
-        const teamAId = teamIds[teamAIndex]
-        const teamBId = teamIds[teamBIndex]
-        const teamA = teamPlayerMap.get(teamAId)!
-        const teamB = teamPlayerMap.get(teamBId)!
-        
-        // Generate multiple matches between these teams with different player combinations
-        const teamMatches = generateTeamVsTeamMatches(teamA, teamB)
-        
-        teamMatches.forEach(matchPlayers => {
-          const timeSlot = timeSlots[Math.floor(matchIndex / courts.length)] || startTime
-          const court = courts[matchIndex % courts.length]
-          
-          if (court && matchPlayers.length >= 4) {
-            // 4. Store template.participants with correct dynamic team values
-            const participants: GeneratedParticipant[] = [
-              { playerId: matchPlayers[0].id, team: teamAId },
-              { playerId: matchPlayers[1].id, team: teamAId },
-              { playerId: matchPlayers[2].id, team: teamBId },
-              { playerId: matchPlayers[3].id, team: teamBId }
-            ]
-
-            const template: MatchTemplate = {
-              id: `team-${teamAId}-${teamBId}-${matchIndex}-${Date.now()}`,
-              title: `Team ${teamAId} vs Team ${teamBId} - Match ${Math.floor(matchIndex / teamMatches.length) + 1}`,
-              match_type: 'Doubles',
-              skill_level: determineBestSkillLevel(participants),
-              court_id: court.id,
-              date: selectedDate,
-              time: timeSlot,
-              duration_minutes: matchDuration,
-              max_players: 4,
-              description: `Team ${teamAId} vs Team ${teamBId} - ${getMatchDescription(matchPlayers, teamA, teamB)}`,
-              notes: `Team match: ${getTeamPlayersDescription(teamA)} vs ${getTeamPlayersDescription(teamB)}`,
-              participants
-            }
-            newTemplates.push(template)
-            matchIndex++
-          }
-        })
-      }
-    }
-
-    return newTemplates
-  }
-  */
-
-  const sortPlayersBySkill = (playersList: Player[]) => {
-    const skillOrder = { 'Professional': 5, 'Advanced': 4, 'Intermediate': 3, 'Beginner': 2, '': 1 }
-    return [...playersList].sort((a, b) => {
-      const skillA = skillOrder[a.skill_level as keyof typeof skillOrder] || 1
-      const skillB = skillOrder[b.skill_level as keyof typeof skillOrder] || 1
-      return skillB - skillA // Higher skill first
-    })
-  }
-
-  const createBalancedTeams = (sortedPlayers: Player[], preferredTeamSize?: number) => {
-    const teams: Player[][] = []
-    const totalPlayers = sortedPlayers.length
-    const teamSizeToUse = preferredTeamSize || teamSize
-    console.log('🎯 [DATA FLOW] createBalancedTeams called with:', {
-      totalPlayers,
-      preferredTeamSize,
-      teamSizeToUse,
-      fallbackTeamSize: teamSize
-    })
-    const optimalSizes = calculateOptimalTeamSizes(totalPlayers, teamSizeToUse, teamCountPreference)
-    console.log('🎯 [DATA FLOW] createBalancedTeams got optimalSizes:', optimalSizes)
-    
-    if (!optimalSizes.isValid) {
-      return teams
-    }
-    
-    // Initialize teams with the correct sizes
-    for (let i = 0; i < optimalSizes.playersPerTeam.length; i++) {
-      teams.push([])
-    }
-    
-    // Distribute players using round-robin assignment for better skill balance
-    let currentTeamIndex = 0
-    for (let playerIndex = 0; playerIndex < totalPlayers; playerIndex++) {
-      const player = sortedPlayers[playerIndex]
-      const targetTeam = teams[currentTeamIndex]
-      const maxTeamSize = optimalSizes.playersPerTeam[currentTeamIndex]
-      
-      // Add player to current team if it has space
-      if (targetTeam.length < maxTeamSize) {
-        targetTeam.push(player)
-      }
-      
-      // Move to next team (round-robin)
-      currentTeamIndex = (currentTeamIndex + 1) % teams.length
-      
-      // If we've gone through all teams once, make sure we continue filling
-      // teams that still have capacity
-      if (currentTeamIndex === 0) {
-        // Find the next team that still has capacity
-        let foundTeamWithCapacity = false
-        for (let i = 0; i < teams.length; i++) {
-          if (teams[i].length < optimalSizes.playersPerTeam[i]) {
-            currentTeamIndex = i
-            foundTeamWithCapacity = true
-            break
-          }
-        }
-        if (!foundTeamWithCapacity) {
-          break // All teams are full
-        }
-      }
-    }
-    
-    // Filter out any teams that are too small
-    const validTeams = teams.filter(team => team.length >= 3)
-    
-    console.log('🎯 [DATA FLOW] createBalancedTeams result:', {
-      teamsCreated: validTeams.length,
-      teamSizes: validTeams.map(team => team.length),
-      skillDistribution: validTeams.map((team, index) => ({
-        teamIndex: index,
-        skills: team.map(p => p.skill_level)
-      }))
-    })
-    
-    return validTeams
-  }
-
-
-  // Unused for now - keeping for reference
-  // const generateTeamVsTeamMatches = (teamA: Player[], teamB: Player[]) => {
-  //   const matches: Player[][] = []
-  //   
-  //   // Match 1: Top 2 players from each team
-  //   if (teamA.length >= 2 && teamB.length >= 2) {
-  //     matches.push([teamA[0], teamA[1], teamB[0], teamB[1]])
-  //   }
-  //   
-  //   // Match 2: Mix of players (1st + 3rd vs 1st + 3rd, or 2nd + 3rd vs 2nd + 3rd)
-  //   if (teamA.length >= 3 && teamB.length >= 3) {
-  //     matches.push([teamA[0], teamA[2], teamB[0], teamB[2]])
-  //   }
-  //   
-  //   // Match 3: Remaining players if teams have 4 players
-  //   if (teamA.length >= 4 && teamB.length >= 4) {
-  //     matches.push([teamA[1], teamA[3], teamB[1], teamB[3]])
-  //   }
-  //   
-  //   return matches
-  // }
-
-  // Unused for now - keeping for reference
-  // const getMatchDescription = (matchPlayers: Player[], teamA: Player[], teamB: Player[]) => {
-  //   const teamAPlayers = matchPlayers.filter(p => teamA.some(ta => ta.id === p.id))
-  //   const teamBPlayers = matchPlayers.filter(p => teamB.some(tb => tb.id === p.id))
-  //   
-  //   const teamAPos = teamAPlayers.map(p => teamA.findIndex(ta => ta.id === p.id) + 1)
-  //   const teamBPos = teamBPlayers.map(p => teamB.findIndex(tb => tb.id === p.id) + 1)
-  //   
-  //   return `Players ${teamAPos.join(' & ')} vs Players ${teamBPos.join(' & ')}`
-  // }
-
-  // const getTeamPlayersDescription = (team: Player[]) => {
-  //   return team.map((p, i) => `${i + 1}. ${p.first_name} ${p.last_name}`).join(', ')
-  // }
 
   const generateRoundRobin = (params?: { preferredTeamSize?: number }) => {
     const preferredTeamSize = params?.preferredTeamSize || teamSize
@@ -737,12 +644,6 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
       const court = availableCourts[index % availableCourts.length]
       
       if (court) {
-        // Assign teams for round robin based on dynamic teamIds
-        console.log('🎯 [DATA FLOW] About to call buildParticipantsForMatch (generateRoundRobin) with:', {
-          comboLength: combo.length,
-          preferredTeamSize: preferredTeamSize,
-          originalTeamSize: teamSize
-        })
         const { participants } = buildParticipantsForMatch(combo, preferredTeamSize)
         
         const template: MatchTemplate = {
@@ -766,13 +667,32 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
     setMatchTemplates(newTemplates)
   }
 
+  // Save current settings to localStorage
+  const saveCurrentSettings = () => {
+    const currentSettings = {
+      startTime,
+      endTime,
+      matchDuration,
+      includeBreaks,
+      breakBetweenMatches,
+      scoringSystem,
+      pointsToWin,
+      teamSize,
+      teamCountPreference,
+      teamFormat,
+      playerRotation,
+      numberOfRounds,
+      generationSettings
+    }
+    saveSettings(currentSettings)
+  }
+
   const handleCreateSingleMatch = async () => {
     if (!singleMatchData.title || !singleMatchData.date || !singleMatchData.time) {
       alert('Please fill in all required fields')
       return
     }
 
-    // Validate that max_players aligns with participant count
     if (singleMatchData.max_players && singleMatchData.max_players !== teamSize * 2) {
       alert(`Max players (${singleMatchData.max_players}) should equal team size × 2 (${teamSize * 2})`)
       return
@@ -781,6 +701,10 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
     try {
       setLoading(true)
       await matchService.createMatch(singleMatchData)
+      
+      // Save settings after successful match creation
+      saveCurrentSettings()
+      
       router.push('/matches')
     } catch (error) {
       console.error('Failed to create match:', error)
@@ -798,7 +722,7 @@ const { participants } = buildParticipantsForMatch(matchPlayers, 1)
 
     try {
       setLoading(true)
-const promises = matchTemplates.map(async template => {
+      const promises = matchTemplates.map(async template => {
         const matchData = {
           ...template,
         };
@@ -814,6 +738,10 @@ const promises = matchTemplates.map(async template => {
       });
 
       await Promise.all(promises);
+      
+      // Save settings after successful bulk match creation
+      saveCurrentSettings()
+      
       router.push('/matches')
     } catch (error) {
       console.error('Failed to create matches:', error)
@@ -826,7 +754,6 @@ const promises = matchTemplates.map(async template => {
   return (
     <DashboardLayout title="Generate Matches">
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link href="/matches">
@@ -842,7 +769,6 @@ const promises = matchTemplates.map(async template => {
           </div>
         </div>
 
-        {/* Available Players Selection */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -897,7 +823,6 @@ const promises = matchTemplates.map(async template => {
           </CardContent>
         </Card>
 
-        {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="single">Single Match</TabsTrigger>
@@ -905,7 +830,6 @@ const promises = matchTemplates.map(async template => {
             <TabsTrigger value="tournament">Tournament</TabsTrigger>
           </TabsList>
 
-          {/* Single Match Tab */}
           <TabsContent value="single" className="space-y-6">
             <Card>
               <CardHeader>
@@ -1046,45 +970,50 @@ const promises = matchTemplates.map(async template => {
             </Card>
           </TabsContent>
 
-          {/* Bulk Generation Tab */}
           <TabsContent value="bulk" className="space-y-6">
-            {/* Generation Settings */}
+            {/* Step 1: Basic Settings */}
             <Card>
               <CardHeader>
-                <CardTitle>Bulk Generation Settings</CardTitle>
-                <CardDescription>Configure automatic match generation parameters</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                  Schedule & Duration
+                </CardTitle>
+                <CardDescription>When and how long should matches run?</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <Label htmlFor="bulk-date">Date</Label>
+                    <Label htmlFor="bulk-date" className="text-sm font-medium">Date</Label>
                     <Input
                       id="bulk-date"
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
+                      className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="start-time">Start Time</Label>
+                    <Label htmlFor="start-time" className="text-sm font-medium">Start Time</Label>
                     <Input
                       id="start-time"
                       type="time"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
+                      className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="end-time">End Time</Label>
+                    <Label htmlFor="end-time" className="text-sm font-medium">End Time</Label>
                     <Input
                       id="end-time"
                       type="time"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
+                      className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="match-duration">Match Duration (min)</Label>
+                    <Label htmlFor="match-duration" className="text-sm font-medium">Duration (min)</Label>
                     <Input
                       id="match-duration"
                       type="number"
@@ -1093,286 +1022,413 @@ const promises = matchTemplates.map(async template => {
                       min="30"
                       max="180"
                       disabled={scoringSystem === 'points'}
+                      className="mt-1"
                     />
                   </div>
                 </div>
+                
+                <div className="mt-4 flex items-center gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="include-breaks"
+                      checked={includeBreaks}
+                      onCheckedChange={(checked) => setIncludeBreaks(!!checked)}
+                    />
+                    <Label htmlFor="include-breaks" className="text-sm">Include {breakBetweenMatches}min breaks</Label>
+                  </div>
+                  {includeBreaks && (
+                    <Input
+                      type="number"
+                      value={breakBetweenMatches}
+                      onChange={(e) => setBreakBetweenMatches(parseInt(e.target.value))}
+                      min="0"
+                      max="60"
+                      className="w-20"
+                    />
+                  )}
+                  <div className="flex items-center space-x-2 ml-auto">
+                    <Label className="text-sm">Scoring:</Label>
+                    <Select value={scoringSystem} onValueChange={(value) => setScoringSystem(value as 'duration' | 'points')}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="duration">Duration</SelectItem>
+                        <SelectItem value="points">Points</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {scoringSystem === 'points' && (
+                      <Input
+                        type="number"
+                        value={pointsToWin}
+                        onChange={(e) => setPointsToWin(parseInt(e.target.value))}
+                        className="w-16"
+                      />
+                    )}
+                  </div>
+                </div>
+                
+                {/* Settings persistence indicator */}
+                <div className="mt-3 text-xs text-gray-500 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Settings will be saved after creating matches
+                </div>
+              </CardContent>
+            </Card>
 
-                {/* Scoring System Selection */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Match Format</Label>
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Scoring System</Label>
-                        <Select value={scoringSystem} onValueChange={(value) => setScoringSystem(value as 'duration' | 'points')}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="duration">Fixed Duration</SelectItem>
-                            <SelectItem value="points">First to Points</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {scoringSystem === 'points' && (
-                        <div>
-                          <Label className="text-sm font-medium mb-2 block">Points to Win</Label>
-                          <Select value={pointsToWin.toString()} onValueChange={(value) => setPointsToWin(parseInt(value))}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="11">11 Points</SelectItem>
-                              <SelectItem value="15">15 Points</SelectItem>
-                              <SelectItem value="21">21 Points</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
+            {/* Step 2: Match Type Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                  Choose Match Type
+                </CardTitle>
+                <CardDescription>What style of matches do you want to generate?</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Button 
+                    onClick={() => generateBalancedMatches()} 
+                    variant="outline" 
+                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-blue-50 hover:border-blue-200"
+                  >
+                    <Target className="h-8 w-8 text-blue-500" />
+                    <div className="text-center">
+                      <div className="font-medium">Balanced</div>
+                      <div className="text-xs text-gray-500">Skill-balanced doubles matches</div>
                     </div>
-                    <div className="mt-3 text-sm text-gray-600">
-                      {scoringSystem === 'duration' ? (
-                        <p>🕐 Matches will run for the specified duration in minutes</p>
-                      ) : (
-                        <p>🏆 Matches will end when the first team reaches {pointsToWin} points</p>
-                      )}
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => generateMixedFormat()} 
+                    variant="outline"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-green-50 hover:border-green-200"
+                  >
+                    <Users className="h-8 w-8 text-green-500" />
+                    <div className="text-center">
+                      <div className="font-medium">Mixed Format</div>
+                      <div className="text-xs text-gray-500">Singles + doubles mix</div>
+                    </div>
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => generateTeamMatches()} 
+                    variant="outline" 
+                    data-cy="generate-team-matches"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-yellow-50 hover:border-yellow-200"
+                  >
+                    <Trophy className="h-8 w-8 text-yellow-500" />
+                    <div className="text-center">
+                      <div className="font-medium">Team Matches</div>
+                      <div className="text-xs text-gray-500">Organized team competitions</div>
+                    </div>
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => generateRoundRobin()} 
+                    variant="outline"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-purple-50 hover:border-purple-200"
+                  >
+                    <Shuffle className="h-8 w-8 text-purple-500" />
+                    <div className="text-center">
+                      <div className="font-medium">Round Robin</div>
+                      <div className="text-xs text-gray-500">All player combinations</div>
+                    </div>
+                  </Button>
+                </div>
+
+                {/* Manual Match Generation */}
+                <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Manual Match Creation
+                      </h4>
+                      <p className="text-sm text-gray-600">Create empty matches that you can configure manually</p>
+                    </div>
+                    <Button onClick={addMatchTemplate} variant="outline" size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Empty Match
+                    </Button>
+                  </div>
+                  {matchTemplates.length > 0 && (
+                    <div className="text-sm text-gray-600">
+                      📝 {matchTemplates.length} manual match{matchTemplates.length !== 1 ? 'es' : ''} created
+                    </div>
+                  )}
+                </div>
+
+                {/* Team Match Options - Only show when relevant */}
+                <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h4 className="font-medium text-yellow-900 mb-3 flex items-center gap-2">
+                    <Trophy className="h-4 w-4" />
+                    Team Match Options
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Team Size</Label>
+                      <Select value={teamSize.toString()} onValueChange={(value) => setTeamSize(parseInt(value))}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3">3 Players</SelectItem>
+                          <SelectItem value="4">4 Players</SelectItem>
+                          <SelectItem value="5">5 Players</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Team Count</Label>
+                      <Select value={teamCountPreference} onValueChange={(value) => setTeamCountPreference(value as 'auto' | 'odd' | 'even')}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">Auto</SelectItem>
+                          <SelectItem value="odd">Odd Teams</SelectItem>
+                          <SelectItem value="even">Even Teams</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Format</Label>
+                      <Select value={teamFormat} onValueChange={(value) => setTeamFormat(value as 'round-robin' | 'team-vs-team')}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="round-robin">Round Robin</SelectItem>
+                          <SelectItem value="team-vs-team">Team vs Team</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  {/* Player Rotation Options */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                    <div>
+                      <Label className="text-sm font-medium">Player Rotation</Label>
+                      <Select value={playerRotation} onValueChange={(value) => setPlayerRotation(value as 'head-to-head' | 'all-combinations')}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="head-to-head">Head-to-Head</SelectItem>
+                          <SelectItem value="all-combinations">All Combinations</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {playerRotation === 'head-to-head' 
+                          ? 'Players rotate sequentially through rounds' 
+                          : 'Generate matches using all possible player combinations'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Number of Rounds</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setNumberOfRounds(Math.max(1, numberOfRounds - 1))}
+                          disabled={numberOfRounds <= 1}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          value={numberOfRounds}
+                          onChange={(e) => setNumberOfRounds(Math.max(1, parseInt(e.target.value) || 1))}
+                          min="1"
+                          max="10"
+                          className="w-16 h-8 text-center"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setNumberOfRounds(Math.min(10, numberOfRounds + 1))}
+                          disabled={numberOfRounds >= 10}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {playerRotation === 'all-combinations' 
+                          ? 'Maximum combinations to generate' 
+                          : 'Number of rounds with player rotation'
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
+            {/* Step 3: Courts & Advanced Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                  Courts & Advanced Options
+                </CardTitle>
+                <CardDescription>Select courts and configure advanced settings (optional)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 {/* Court Selection */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Available Courts ({selectedCourts.length} selected)</Label>
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div className="flex gap-2 mb-3">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-sm font-medium">Available Courts ({selectedCourts.length} selected)</Label>
+                    <div className="flex gap-2">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => setSelectedCourts(courts.map(c => c.id))}
+                        className="text-xs"
                       >
                         Select All
                       </Button>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => setSelectedCourts([])}
+                        className="text-xs"
                       >
-                        Clear All
+                        Clear
                       </Button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {courts.map((court) => (
-                        <div key={court.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`court-${court.id}`}
-                            checked={selectedCourts.includes(court.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedCourts(prev => [...prev, court.id])
-                              } else {
-                                setSelectedCourts(prev => prev.filter(id => id !== court.id))
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {courts.map((court) => (
+                      <div key={court.id} className="flex items-center space-x-2 p-2 border rounded hover:bg-gray-50">
+                        <Checkbox
+                          id={`court-${court.id}`}
+                          checked={selectedCourts.includes(court.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedCourts(prev => [...prev, court.id])
+                            } else {
+                              setSelectedCourts(prev => prev.filter(id => id !== court.id))
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`court-${court.id}`} className="text-sm cursor-pointer flex-1">
+                          {court.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Advanced Options - Collapsible */}
+                <details className="group">
+                  <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-medium text-gray-700 hover:text-gray-900">
+                    <div className="transform transition-transform group-open:rotate-90">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                    Advanced Player Matching Options
+                  </summary>
+                  <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Player Matching</Label>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="balance-skills"
+                              checked={generationSettings.balanceSkills}
+                              onCheckedChange={(checked) => 
+                                setGenerationSettings(prev => ({ ...prev, balanceSkills: !!checked }))
                               }
-                            }}
-                          />
-                          <Label htmlFor={`court-${court.id}`} className="text-sm cursor-pointer flex-1">
-                            {court.name}
-                          </Label>
+                            />
+                            <Label htmlFor="balance-skills" className="text-sm">Balance skill levels</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="mixed-skills"
+                              checked={generationSettings.allowMixedSkills}
+                              onCheckedChange={(checked) => 
+                                setGenerationSettings(prev => ({ ...prev, allowMixedSkills: !!checked }))
+                              }
+                            />
+                            <Label htmlFor="mixed-skills" className="text-sm">Allow mixed skill levels</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="similar-ratings"
+                              checked={generationSettings.preferSimilarRatings}
+                              onCheckedChange={(checked) => 
+                                setGenerationSettings(prev => ({ ...prev, preferSimilarRatings: !!checked }))
+                              }
+                            />
+                            <Label htmlFor="similar-ratings" className="text-sm">Prefer similar ratings</Label>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Player Matching</Label>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="balance-skills"
-                          checked={generationSettings.balanceSkills}
-                          onCheckedChange={(checked) => 
-                            setGenerationSettings(prev => ({ ...prev, balanceSkills: !!checked }))
-                          }
-                        />
-                        <Label htmlFor="balance-skills" className="text-sm">Balance skill levels</Label>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="mixed-skills"
-                          checked={generationSettings.allowMixedSkills}
-                          onCheckedChange={(checked) => 
-                            setGenerationSettings(prev => ({ ...prev, allowMixedSkills: !!checked }))
-                          }
-                        />
-                        <Label htmlFor="mixed-skills" className="text-sm">Allow mixed skill levels</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="similar-ratings"
-                          checked={generationSettings.preferSimilarRatings}
-                          onCheckedChange={(checked) => 
-                            setGenerationSettings(prev => ({ ...prev, preferSimilarRatings: !!checked }))
-                          }
-                        />
-                        <Label htmlFor="similar-ratings" className="text-sm">Prefer similar ratings</Label>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Player Selection</Label>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="prioritize-active"
-                          checked={generationSettings.prioritizeActiveMembers}
-                          onCheckedChange={(checked) => 
-                            setGenerationSettings(prev => ({ ...prev, prioritizeActiveMembers: !!checked }))
-                          }
-                        />
-                        <Label htmlFor="prioritize-active" className="text-sm">Prioritize active members</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="include-new"
-                          checked={generationSettings.includeNewMembers}
-                          onCheckedChange={(checked) => 
-                            setGenerationSettings(prev => ({ ...prev, includeNewMembers: !!checked }))
-                          }
-                        />
-                        <Label htmlFor="include-new" className="text-sm">Include new members</Label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {/* Team Configuration */}
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <h4 className="font-medium text-yellow-900 mb-3">🏆 Team Match Configuration</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="team-size" className="text-sm font-medium">Preferred Team Size</Label>
-                        <Select 
-                          value={teamSize.toString()} 
-                          onValueChange={(value) => setTeamSize(parseInt(value))}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="3">3 Players per Team</SelectItem>
-                            <SelectItem value="4">4 Players per Team</SelectItem>
-                            <SelectItem value="5">5 Players per Team</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="team-count-preference" className="text-sm font-medium">Team Count Preference</Label>
-                        <Select 
-                          value={teamCountPreference} 
-                          onValueChange={(value) => setTeamCountPreference(value as 'auto' | 'odd' | 'even')}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">Auto (Optimal)</SelectItem>
-                            <SelectItem value="odd">Prefer Odd Teams</SelectItem>
-                            <SelectItem value="even">Prefer Even Teams</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="team-format" className="text-sm font-medium">Team Format</Label>
-                        <Select 
-                          value={teamFormat} 
-                          onValueChange={(value) => setTeamFormat(value as 'round-robin' | 'team-vs-team')}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="round-robin">Round Robin (All vs All)</SelectItem>
-                            <SelectItem value="team-vs-team">Team vs Team (Paired)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Recommendation for {availablePlayers.length} Players</Label>
-                        <div className="text-sm">
-                        {(() => {
-                          console.log('🎯 [DATA FLOW] calculateOptimalTeamSizes called with:', {
-                            availablePlayers: availablePlayers.length,
-                            teamSize: teamSize,
-                            teamCountPreference: teamCountPreference
-                          })
-                          const recommendation = calculateOptimalTeamSizes(availablePlayers.length, teamSize, teamCountPreference)
-                          console.log('🎯 [DATA FLOW] calculateOptimalTeamSizes returned:', recommendation)
-                          return (
-                            <div className={`p-2 rounded ${recommendation.isValid ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`} data-cy="team-recommendation">
-                              {recommendation.description}
-                            </div>
-                          )
-                        })()}
+                      
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Player Selection</Label>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="prioritize-active"
+                              checked={generationSettings.prioritizeActiveMembers}
+                              onCheckedChange={(checked) => 
+                                setGenerationSettings(prev => ({ ...prev, prioritizeActiveMembers: !!checked }))
+                              }
+                            />
+                            <Label htmlFor="prioritize-active" className="text-sm">Prioritize active members</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="include-new"
+                              checked={generationSettings.includeNewMembers}
+                              onCheckedChange={(checked) => 
+                                setGenerationSettings(prev => ({ ...prev, includeNewMembers: !!checked }))
+                              }
+                            />
+                            <Label htmlFor="include-new" className="text-sm">Include new members</Label>
+                          </div>
                         </div>
-                        {(() => {
-                          const options = calculateOptimalTeamSizes(availablePlayers.length, teamSize).options
-                          return options.length > 1 && (
-                            <details className="text-xs">
-                              <summary className="cursor-pointer text-blue-600 hover:text-blue-800">View other options</summary>
-                              <div className="mt-2 space-y-1">
-                                {options.slice(1).map((option, index) => (
-                                  <div key={index} className="text-gray-600">
-                                    • {option.description}
-                                  </div>
-                                ))}
-                              </div>
-                            </details>
-                          )
-                        })()}
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="text-sm text-gray-600 mb-2">
-                    <strong>Generation Options:</strong>
-                    <ul className="mt-1 space-y-1 text-xs">
-                      <li>• <strong>Balanced:</strong> Creates matches of the same type with skill balancing</li>
-                      <li>• <strong>Mixed Format:</strong> Intelligently mixes singles and doubles (e.g., 10 players → 2 doubles + 1 singles)</li>
-                      <li>• <strong>Team Matches (Round Robin):</strong> Creates teams with optimal sizes, generates all possible team vs team matches</li>
-                      <li>• <strong>Bracket Tournament:</strong> Creates elimination-style tournament (coming soon)</li>
-                      <li>• <strong>Round Robin:</strong> Generates all possible player combinations for tournament play</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Button onClick={() => generateBalancedMatches()} variant="outline">
-                      <Target className="h-4 w-4 mr-2" />
-                      Generate Balanced Matches
-                    </Button>
-                    <Button onClick={() => generateMixedFormat()} variant="outline">
-                      <Users className="h-4 w-4 mr-2" />
-                      Generate Mixed Format
-                    </Button>
-                    <Button onClick={() => generateTeamMatches()} variant="outline" data-cy="generate-team-matches">
-                      <Trophy className="h-4 w-4 mr-2" />
-                      Generate Team Matches (Round Robin)
-                    </Button>
-                    <Button onClick={() => alert('Bracket generation coming soon!')} variant="outline" disabled>
-                      <Trophy className="h-4 w-4 mr-2" />
-                      Generate Bracket Tournament
-                    </Button>
-                    <Button onClick={() => generateRoundRobin()} variant="outline">
-                      <Shuffle className="h-4 w-4 mr-2" />
-                      Generate Round Robin
-                    </Button>
-                    <Button onClick={addMatchTemplate} variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Manual Match
-                    </Button>
-                  </div>
+                </details>
+                
+                {/* Reset to defaults button */}
+                <div className="pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      const defaults = DEFAULT_SETTINGS
+                      setStartTime(defaults.startTime)
+                      setEndTime(defaults.endTime)
+                      setMatchDuration(defaults.matchDuration)
+                      setIncludeBreaks(defaults.includeBreaks)
+                      setBreakBetweenMatches(defaults.breakBetweenMatches)
+                      setScoringSystem(defaults.scoringSystem)
+                      setPointsToWin(defaults.pointsToWin)
+                      setTeamSize(defaults.teamSize)
+                      setTeamCountPreference(defaults.teamCountPreference)
+                      setTeamFormat(defaults.teamFormat)
+                      setPlayerRotation(defaults.playerRotation)
+                      setNumberOfRounds(defaults.numberOfRounds)
+                      setGenerationSettings(defaults.generationSettings)
+                    }}
+                    className="text-xs"
+                  >
+                    Reset to Defaults
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -1435,7 +1491,7 @@ const promises = matchTemplates.map(async template => {
                     return (
                       <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] sm:gap-6 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
                         {Array.from(teamData.entries()).map(([teamId, data], teamIndex) => {
-const color = getTeamColorsByIndex(teamIndex)
+                          const color = getTeamColorsByIndex(teamIndex)
                           const teamPlayersArray = Array.from(data.players).map(playerId => 
                             players.find(p => p.id === playerId)
                           ).filter(Boolean)
@@ -1524,12 +1580,11 @@ const color = getTeamColorsByIndex(teamIndex)
               </Card>
             )}
 
-            {/* Match Templates */}
             {matchTemplates.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Generated Matches ({matchTemplates.length})</CardTitle>
-                  <CardDescription>Review team matchups and match schedule</CardDescription>
+                  <CardDescription>Review generated matches and schedule</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -1586,7 +1641,6 @@ const color = getTeamColorsByIndex(teamIndex)
 
                         <div className="text-sm text-gray-600" data-cy="match-participants">
                           {(() => {
-                            // Group participants by team
                             const teamGroups = new Map<string, GeneratedParticipant[]>()
                             template.participants.forEach(p => {
                               if (!teamGroups.has(p.team)) {
@@ -1625,7 +1679,6 @@ const color = getTeamColorsByIndex(teamIndex)
             )}
           </TabsContent>
 
-          {/* Tournament Tab */}
           <TabsContent value="tournament" className="space-y-6">
             <Card>
               <CardHeader>
@@ -1642,7 +1695,7 @@ const color = getTeamColorsByIndex(teamIndex)
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </div>  
     </DashboardLayout>
   )
 }
