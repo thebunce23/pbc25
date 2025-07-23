@@ -1,0 +1,25 @@
+{
+  "name": "my-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "web",
+    "mobile",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r exec rm -rf node_modules && rm -rf node_modules",
+    "dev:web": "pnpm --filter @my-monorepo/web dev",
+    "dev:mobile": "pnpm --filter @my-monorepo/mobile dev",
+    "dev:backend": "pnpm --filter @my-monorepo/backend dev",
+    "build:web": "pnpm --filter @my-monorepo/web build",
+    "build:mobile": "pnpm --filter @my-monorepo/mobile build",
+    "build:backend": "pnpm --filter @my-monorepo/backend build"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
+
