@@ -46,10 +46,50 @@ class CourtService {
   // Load courts from Supabase
   async loadCourts(): Promise<void> {
     try {
-      const { data, error } = await this.supabase
-        .from('courts')
-        .select('*')
-        .order('name')
+      // Check if we're using a mock client (development mode)
+      const queryBuilder = this.supabase.from('courts').select('*')
+      
+      let result
+      if (queryBuilder.order) {
+        // Real Supabase client
+        result = await queryBuilder.order('name')
+      } else {
+        // Mock client - return sample data for development
+        console.log('Using mock court data for development')
+        result = {
+          data: [
+            {
+              id: 'mock-court-1',
+              name: 'Court A',
+              type: 'Indoor',
+              surface: 'Hard Court',
+              status: 'active',
+              description: 'Main indoor court',
+              hourly_rate: 25,
+              lighting: true,
+              air_conditioning: true,
+              accessibility: true,
+              amenities: ['Water fountain', 'Seating']
+            },
+            {
+              id: 'mock-court-2',
+              name: 'Court B',
+              type: 'Outdoor',
+              surface: 'Asphalt',
+              status: 'active',
+              description: 'Outdoor practice court',
+              hourly_rate: 20,
+              lighting: false,
+              air_conditioning: false,
+              accessibility: true,
+              amenities: ['Benches']
+            }
+          ],
+          error: null
+        }
+      }
+
+      const { data, error } = result
 
       if (error) {
         console.error('Error loading courts:', error)

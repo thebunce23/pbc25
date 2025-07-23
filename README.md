@@ -1,104 +1,107 @@
-# My Monorepo
+# PBC25 Pickleball Club Platform
 
-This is a monorepo using PNPM Workspaces containing three main applications:
+A comprehensive multi-tenant pickleball club management platform built with Next.js, Supabase, and TypeScript.
 
-## Structure
-
-```
-.
-├── web/        # Web application
-├── mobile/     # Mobile application
-├── backend/    # Backend application
-└── README.md
-```
-
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-
-Make sure you have PNPM installed:
-
-```bash
-npm install -g pnpm
-```
+- Node.js 18+
+- npm, yarn, pnpm, or bun
+- Supabase account
 
 ### Installation
 
-Install all dependencies for all workspaces:
+1. **Clone and install dependencies**
+   ```bash
+   git clone <repository-url>
+   cd pickleball-club-platform
+   npm install
+   ```
 
-```bash
-pnpm install
+2. **Set up environment variables**
+   ```bash
+   cp .env.example .env.local
+   ```
+   Fill in your Supabase credentials in `.env.local`
+
+3. **Run the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   # or
+   pnpm dev
+   # or
+   bun dev
+   ```
+
+4. **Open the application**
+   Visit [http://localhost:3000](http://localhost:3000)
+
+## 🏆 Team Management System
+
+### Auto-Expanding Team IDs
+
+The platform now supports **unlimited team expansion** beyond the traditional A vs B format:
+
+- **Team IDs**: A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
+- **Automatic Generation**: Teams are automatically assigned based on the number of teams needed
+- **Dynamic Scaling**: The system adapts to any number of teams for tournaments and events
+
+### Key Features
+
+#### 🎯 **Smart Team Assignment**
+- Automatically generates team IDs based on player count
+- Optimal team size calculation (3-6 players per team)
+- Balanced team creation with skill-level distribution
+
+#### 🎨 **Team Color System**
+- **Built-in Color Palette**: 8 predefined team colors (A-H)
+- **Extensible Design**: Easy to add more colors for teams beyond H
+- **Consistent Styling**: Each team has background, text, and border colors
+
+#### 🔧 **API Usage**
+
+```typescript
+// Generate team IDs for any number of teams
+import { getTeamIds } from '@/lib/utils/match-utils'
+
+// Create 5 teams: ['A', 'B', 'C', 'D', 'E']
+const teamIds = getTeamIds(5)
+
+// Get team colors
+import { getTeamColors } from '@/lib/utils/match-utils'
+const teamAColors = getTeamColors('A')
+// Returns: { background: 'bg-blue-100', text: 'text-blue-600', ... }
+
+// Calculate optimal team sizes (respects user's preferred team size)
+import { calculateOptimalTeamSizes } from '@/lib/utils/team-utils'
+const result = calculateOptimalTeamSizes(18, 4) // 18 players, prefer 4 per team
+// Returns: { teamCount: 4, playersPerTeam: [4, 4, 4, 6], isValid: true }
+
+// Build participants for matches (team-size aware)
+import { buildParticipantsForMatch } from '@/lib/utils/team-utils'
+const { participants } = buildParticipantsForMatch(players, 4) // Respects preferred team size
+
+// Generate round-robin matches with optimal team sizes
+import { generateRoundRobinWithPlayers } from '@/lib/utils/team-utils'
+const matches = generateRoundRobinWithPlayers(teamPlayerMap, 4) // Uses preferredTeamSize
 ```
 
-### Development
+## 📚 Documentation
 
-Start all applications in parallel:
+- **[Feature Documentation](./README-FEATURES.md)** - Complete feature overview
+- **[Testing Guide](./docs/TESTING_GUIDE.md)** - Team system testing
+- **[Project Plan](./PROJECT_PLAN.md)** - Development roadmap
 
-```bash
-pnpm dev
-```
+## 🔗 Learn More
 
-Or start individual applications:
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
 
-```bash
-pnpm dev:web     # Start web application
-pnpm dev:mobile  # Start mobile application
-pnpm dev:backend # Start backend application
-```
+## 🚀 Deployment
 
-### Building
+The platform is optimized for deployment on [Vercel](https://vercel.com) with Supabase as the backend.
 
-Build all applications:
-
-```bash
-pnpm build
-```
-
-Or build individual applications:
-
-```bash
-pnpm build:web     # Build web application
-pnpm build:mobile  # Build mobile application
-pnpm build:backend # Build backend application
-```
-
-### Testing
-
-Run tests for all workspaces:
-
-```bash
-pnpm test
-```
-
-### Workspace Management
-
-- Install a dependency to a specific workspace:
-  ```bash
-  pnpm --filter @my-monorepo/web add react
-  ```
-
-- Install a dev dependency to all workspaces:
-  ```bash
-  pnpm -r add -D typescript
-  ```
-
-- Run a command in all workspaces:
-  ```bash
-  pnpm -r exec npm audit
-  ```
-
-### Clean
-
-Remove all node_modules:
-
-```bash
-pnpm clean
-```
-
-## Workspaces
-
-- **@my-monorepo/web**: Web application workspace
-- **@my-monorepo/mobile**: Mobile application workspace  
-- **@my-monorepo/backend**: Backend application workspace
-
-Each workspace is a separate npm package with its own `package.json` and can have its own dependencies and scripts.
+See our [deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for details.
