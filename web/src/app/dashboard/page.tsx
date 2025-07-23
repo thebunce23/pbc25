@@ -33,7 +33,7 @@ export default function DashboardPage() {
       try {
         const [playerStats, courts] = await Promise.all([
           playerService.getPlayerStats(),
-          courtService.getCourts()
+          courtService.getAllCourts()
         ])
 
         const courtStats = {
