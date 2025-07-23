@@ -19,7 +19,13 @@ export const createClient = () => {
         signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
         signInWithOAuth: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
         signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
-        signOut: () => Promise.resolve({ error: null })
+        signOut: () => Promise.resolve({ error: null }),
+        onAuthStateChange: (callback: (event: string, session: any) => void) => {
+          // Mock implementation - immediately call callback with no session
+          setTimeout(() => callback('SIGNED_OUT', null), 0)
+          // Return unsubscribe function directly (based on how it's used in auth-context.tsx)
+          return () => {}
+        }
       },
       from: () => ({
         select: () => ({
