@@ -44,6 +44,7 @@ import {
 import { format, addDays, isAfter, isBefore, parseISO } from 'date-fns'
 import EventForm from '@/components/events/event-form'
 import EventDetailsModal from '@/components/modals/event-details-modal'
+import EventsCalendar from '@/components/events/events-calendar'
 
 export interface Event {
   id: string
@@ -93,6 +94,138 @@ export interface Event {
   createdAt: string
   updatedAt: string
 }
+
+// Mock courts data (imported from court system)
+const mockCourts = [
+  {
+    id: '1',
+    name: 'Court A',
+    type: 'Indoor',
+    status: 'active'
+  },
+  {
+    id: '2', 
+    name: 'Court B',
+    type: 'Indoor',
+    status: 'active'
+  },
+  {
+    id: '3',
+    name: 'Court C', 
+    type: 'Outdoor',
+    status: 'maintenance'
+  },
+  {
+    id: '4',
+    name: 'Court D',
+    type: 'Outdoor', 
+    status: 'active'
+  }
+]
+
+// Mock booking data (imported from court booking system)
+interface Booking {
+  id: string
+  courtId: string
+  courtName: string
+  title: string
+  type: 'member' | 'club_event' | 'maintenance' | 'social' | 'tournament'
+  startTime: string
+  endTime: string
+  date: string
+  status: 'confirmed' | 'pending' | 'cancelled'
+  memberName?: string
+  memberEmail?: string
+  description?: string
+  isBlocked?: boolean
+  createdBy: 'member' | 'club'
+  participants?: number
+  maxParticipants?: number
+  cost?: number
+}
+
+const mockBookings: Booking[] = [
+  {
+    id: '1',
+    courtId: '1',
+    courtName: 'Court A',
+    title: 'Weekly Club Tournament',
+    type: 'tournament',
+    startTime: '09:00',
+    endTime: '17:00',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    status: 'confirmed',
+    description: 'Weekly club tournament for all skill levels',
+    createdBy: 'club',
+    participants: 16,
+    maxParticipants: 32,
+    cost: 15
+  },
+  {
+    id: '2',
+    courtId: '2',
+    courtName: 'Court B',
+    title: 'Social Mixer Night',
+    type: 'social',
+    startTime: '18:00',
+    endTime: '21:00',
+    date: format(new Date(Date.now() + 86400000), 'yyyy-MM-dd'), // Tomorrow
+    status: 'confirmed',
+    description: 'Monthly social mixer with snacks and drinks',
+    createdBy: 'club',
+    participants: 8,
+    maxParticipants: 20,
+    cost: 0
+  },
+  {
+    id: '3',
+    courtId: '3',
+    courtName: 'Court C',
+    title: 'Court Maintenance',
+    type: 'maintenance',
+    startTime: '08:00',
+    endTime: '12:00',
+    date: format(new Date(Date.now() + 2 * 86400000), 'yyyy-MM-dd'), // Day after tomorrow
+    status: 'confirmed',
+    description: 'Surface repair and line painting',
+    createdBy: 'club',
+    isBlocked: true
+  },
+  {
+    id: '4',
+    courtId: '1',
+    courtName: 'Court A',
+    title: 'Member Booking - John Smith',
+    type: 'member',
+    startTime: '14:00',
+    endTime: '16:00',
+    date: format(new Date(Date.now() + 3 * 86400000), 'yyyy-MM-dd'),
+    status: 'confirmed',
+    memberName: 'John Smith',
+    memberEmail: 'john@example.com',
+    description: 'Practice session',
+    createdBy: 'member',
+    participants: 4,
+    cost: 50
+  },
+  {
+    id: '5',
+    courtId: '2',
+    courtName: 'Court B',
+    title: 'Member Booking - Lisa Chen',
+    type: 'member',
+    startTime: '10:00',
+    endTime: '11:30',
+    date: format(new Date(), 'yyyy-MM-dd'), // Today
+    status: 'confirmed',
+    memberName: 'Lisa Chen',
+    memberEmail: 'lisa@example.com',
+    description: 'Morning training session',
+    createdBy: 'member',
+    participants: 2,
+    cost: 30
+  }
+]
 
 // Mock events data
 const mockEvents: Event[] = [
@@ -719,20 +852,18 @@ export default function EventsPage() {
           </div>
         )}
 
-        {/* Calendar View Placeholder */}
+        {/* Calendar View */}
         {viewMode === 'calendar' && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <CalendarDays className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-              <h3 className="text-xl font-medium text-gray-900 mb-2">Calendar View</h3>
-              <p className="text-gray-500 mb-4">
-                Calendar view coming soon! View events in a monthly calendar layout.
-              </p>
-              <Button variant="outline" onClick={() => setViewMode('list')}>
-                Back to List View
-              </Button>
-            </CardContent>
-          </Card>
+          <EventsCalendar
+            events={filteredEvents}
+            onEventClick={handleViewEvent}
+            bookings={mockBookings}
+            courts={mockCourts}
+            onBookingClick={(booking) => {
+              console.log('Booking clicked:', booking)
+              // In a real app, this would open a booking details modal
+            }}
+          />
         )}
 
         {/* Event Form Modal */}

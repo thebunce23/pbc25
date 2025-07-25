@@ -6,39 +6,14 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 
 // Client-side Supabase client (for use in client components)
 export const createClient = () => {
-  // Check if Supabase is configured with real values (not placeholders)
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || 
       !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === 'placeholder_anon_key') {
-    // Return a mock client for development
-    console.log('Using mock Supabase client - not configured or using placeholder values')
-    return {
-      auth: {
-        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-        signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
-        signInWithOAuth: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
-        signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
-        signOut: () => Promise.resolve({ error: null }),
-        onAuthStateChange: (callback: (event: string, session: any) => void) => {
-          // Mock implementation - immediately call callback with no session
-          setTimeout(() => callback('SIGNED_OUT', null), 0)
-          // Return unsubscribe function directly (based on how it's used in auth-context.tsx)
-          return () => {}
-        }
-      },
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: null, error: null })
-          })
-        }),
-        insert: () => ({
-          select: () => Promise.resolve({ data: null, error: null })
-        }),
-        upsert: () => Promise.resolve({ data: null, error: null })
-      })
-    } as any
+      process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-project-ref') ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('your_anon_key')) {
+    throw new Error(
+      'Please update your .env.local file with real Supabase credentials. ' +
+      'You can find these in your Supabase project dashboard under Settings > API.'
+    )
   }
   return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }

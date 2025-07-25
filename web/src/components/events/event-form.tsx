@@ -71,6 +71,15 @@ const eventSchema = z.object({
   equipment: z.array(z.string()).optional(),
   rules: z.string().optional(),
   notes: z.string().optional(),
+  // Recurring event fields
+  isRecurring: z.boolean().optional(),
+  recurrence: z.object({
+    pattern: z.enum(['daily', 'weekly', 'monthly']).optional(),
+    interval: z.number().min(1).optional(),
+    daysOfWeek: z.array(z.number()).optional(),
+    endDate: z.string().optional(),
+    occurrences: z.number().min(1).optional(),
+  }).optional(),
 })
 
 interface EventFormProps {
@@ -122,6 +131,7 @@ const EventForm: React.FC<EventFormProps> = ({
 }) => {
   const [selectedCourts, setSelectedCourts] = useState<string[]>([])
   const [isMultiDay, setIsMultiDay] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
 
   const {
     register,
@@ -401,13 +411,31 @@ const EventForm: React.FC<EventFormProps> = ({
 
           {/* Date and Time */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isMultiDay"
-                checked={isMultiDay}
-                onCheckedChange={(checked) => setIsMultiDay(checked as boolean)}
-              />
-              <Label htmlFor="isMultiDay">Multi-day event</Label>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isMultiDay"
+                  checked={isMultiDay}
+                  onCheckedChange={(checked) => setIsMultiDay(checked as boolean)}
+                  disabled={isRecurring}
+                />
+                <Label htmlFor="isMultiDay">Multi-day event</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isRecurring"
+                  checked={isRecurring}
+                  onCheckedChange={(checked) => {
+                    setIsRecurring(checked as boolean)
+                    setValue('isRecurring', checked as boolean)
+                    if (checked) {
+                      setIsMultiDay(false)
+                      setValue('endDate', '')
+                    }
+                  }}
+                />
+                <Label htmlFor="isRecurring">Recurring event</Label>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -475,6 +503,72 @@ const EventForm: React.FC<EventFormProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Recurring Event Configuration */}
+          {isRecurring && (
+            <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Recurring Configuration
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence-pattern">Repeat Pattern *</Label>
+                  <Select onValueChange={(value) => setValue('recurrence.pattern', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select pattern" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence-interval">Every (interval)</Label>
+                  <Input
+                    id="recurrence-interval"
+                    type="number"
+                    min="1"
+                    {...register('recurrence.interval', { valueAsNumber: true })}
+                    placeholder="1"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence-endDate">End Date</Label>
+                  <Input
+                    id="recurrence-endDate"
+                    type="date"
+                    {...register('recurrence.endDate')}
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                  />
+                  <p className="text-xs text-gray-500">When should the recurring events stop?</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence-occurrences">Max Occurrences</Label>
+                  <Input
+                    id="recurrence-occurrences"
+                    type="number"
+                    min="1"
+                    {...register('recurrence.occurrences', { valueAsNumber: true })}
+                    placeholder="Leave empty for no limit"
+                  />
+                  <p className="text-xs text-gray-500">Alternative to end date</p>
+                </div>
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  For recurring events, only the start date is used. Each occurrence will be on the same day of the week/month based on your pattern.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
 
           {/* Location and Courts */}
           <div className="space-y-4">

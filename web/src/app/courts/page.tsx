@@ -9,6 +9,14 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -504,108 +512,123 @@ export default function CourtsPage() {
           </div>
         </div>
 
-        {/* Courts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourts.map((court) => (
-            <Card 
-              key={court.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => handleViewProfile(court)}
-            >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{court.name}</CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEditCourtClick(court)
-                      }}
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteCourt(court.id)
-                      }}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge className={statusColors[court.status as keyof typeof statusColors]}>
-                    {statusLabels[court.status as keyof typeof statusLabels]}
-                  </Badge>
-                  <Badge className={typeColors[court.type as keyof typeof typeColors]}>
-                    {court.type}
-                  </Badge>
-                  <Badge className={surfaceColors[court.surface as keyof typeof surfaceColors]}>
-                    {court.surface}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">{court.description}</p>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="text-muted-foreground">Rate</div>
-                    <div className="font-medium">${court.hourlyRate}/hour</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Today</div>
-                    <div className="font-medium">{court.bookings.today} bookings</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-1">
-                    <MapPin className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      {court.dimensions.length}' × {court.dimensions.width}'
-                    </span>
-                  </div>
-                  {court.status === 'maintenance' && (
-                    <div className="flex items-center space-x-1 text-yellow-600">
-                      <AlertTriangle className="h-3 w-3" />
-                      <span className="text-xs">Maintenance</span>
+        {/* Courts Table */}
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[150px]">Court Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Surface</TableHead>
+                <TableHead>Rate</TableHead>
+                <TableHead>Dimensions</TableHead>
+                <TableHead>Today's Bookings</TableHead>
+                <TableHead>Amenities</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCourts.map((court) => (
+                <TableRow 
+                  key={court.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleViewProfile(court)}
+                >
+                  <TableCell className="font-medium">
+                    <div>
+                      <div className="font-semibold">{court.name}</div>
+                      <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                        {court.description}
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                {court.amenities.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {court.amenities.slice(0, 3).map((amenity, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {amenity}
-                      </Badge>
-                    ))}
-                    {court.amenities.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{court.amenities.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-          
-          {filteredCourts.length === 0 && (
-            <div className="col-span-full text-center py-8">
-              <p className="text-gray-500">No courts found matching your criteria.</p>
-            </div>
-          )}
-        </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={statusColors[court.status as keyof typeof statusColors]}>
+                      {statusLabels[court.status as keyof typeof statusLabels]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={typeColors[court.type as keyof typeof typeColors]}>
+                      {court.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={surfaceColors[court.surface as keyof typeof surfaceColors]}>
+                      {court.surface}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    ${court.hourlyRate}/hr
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {court.dimensions.length}' × {court.dimensions.width}'
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{court.bookings.today}</span>
+                      {court.status === 'maintenance' && (
+                        <div className="flex items-center gap-1 text-yellow-600">
+                          <AlertTriangle className="h-3 w-3" />
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                      {court.amenities.slice(0, 2).map((amenity, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {amenity}
+                        </Badge>
+                      ))}
+                      {court.amenities.length > 2 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{court.amenities.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditCourtClick(court)
+                        }}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteCourt(court.id)
+                        }}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredCourts.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8">
+                    <p className="text-gray-500">No courts found matching your criteria.</p>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Card>
 
         {/* Add Court Form */}
         <AddCourtForm
